@@ -1,0 +1,34 @@
+rel_ez_intensity
+|	base.py
+|	utils.py
+|	__init__.py
+
+
+base.py :
+
+objects
+=> RelEZIntensity
+	-> Fovea Koordinaten
+	-> Abstandsmatrix
+	-> Aufnahme-Format
+	-> Profilbreite
+	-> Liste(PIDs)
+	
+	- Abstandsmatrix bestimmen
+		-> IDs
+	- Excel-Tabelle erstellen
+
+=> Patient
+	-> ID
+	-> Name
+	-> number of visits
+	-> List (EZMap) 
+
+
+=> EZMap
+	-> visit date
+	-> Map (m x n x 3) 
+
+pandas für excel erstellen
+	- erstelle json 
+	- To excel 	
