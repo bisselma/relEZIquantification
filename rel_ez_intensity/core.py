@@ -9,8 +9,11 @@ import utils as ut
 import eyepy as ep
 import matplotlib.pyplot as plt
 from PIL import Image
-from seg_core import get_retinal_layers
 from getAdjacencyMatrix import plot_layers
+from seg_core import get_retinal_layers
+from scipy.stats import moment
+from scipy.signal import find_peaks
+from datetime import date
 
 
 class OCTMap:
@@ -18,11 +21,11 @@ class OCTMap:
     def __init__(
             self,
             name: str,
-            date_of_origin: Optional[str] = None,
+            date_of_origin: Optional[date] = None,
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
             laterality: Optional[str] = None,
-            octmap: Optional[np.ndarray] = None,
+            octmap: Optional[Dict] = None,
             ) -> None:
         self.name = name
         self.date_of_origin = date_of_origin
@@ -97,8 +100,8 @@ class RelEZIntensity:
     def __init__(
             self,
             fovea_coords: Optional[Dict] = None,
-            ez_distance_map: Optional[List[OCTMap]] = None, # [mean distance, standard diviation]
-            elm_distance_map: Optional[List[OCTMap]] = None, # [mean distance, standard diviation]
+            ez_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
+            elm_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
             patients: Optional[List[Patient]] = None
@@ -119,15 +122,6 @@ class RelEZIntensity:
     #
     #
     """
-    def create_intensity_profile(self, stack, layer) -> Optional[np.ndarray]:
-        
-        sum = np.zeros((200,))
-        for col, l in zip(stack.T, 496 - np.round(layer).astype(int)):
-                a_scan = col[l[0] - 100: l[0] + 100]
-                if not any(a_scan > 468):
-                    sum += a_scan
-        
-        return sum / self.stackwidth
 
 
     def create_ssd_maps(
@@ -183,7 +177,7 @@ class RelEZIntensity:
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
         nos = scan_size[1] // stackwidth # number of stacks
 
-        ez_distance = np.empty(shape=[scan_size[0], nos, 0])
+        ez_distance = np.empty(shape=[0, scan_size[0], nos])
         elm_distance = np.empty_like(ez_distance)
 
         
@@ -191,7 +185,7 @@ class RelEZIntensity:
         for vol_path in data_dict[".vol"]:
 
             # current distance map
-            curr_ez_distance = np.zeros((scan_size[0], nos))
+            curr_ez_distance = np.zeros((1, scan_size[0], nos))
             curr_elm_distance = np.zeros_like(curr_ez_distance)
             
             # get vol data from file
@@ -221,26 +215,29 @@ class RelEZIntensity:
 
             for bscan, ez, elm in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
-                curr_ez_distance[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                curr_elm_distance[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :] # write
+                curr_ez_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :] # write
                 ):
-
-                bscan_data = bscan._scan_raw
                 
-                
-                if lat == "OS":
-                    np.flip(bscan_data)
 
                 # layer to caculate distance. E.g. RPE (default) or BM  !!!!!!!!!!! TO BE ADDED
                 
-                layer = bscan.layers[ref_layer].astype(np.uint16)
-
+                try:
+                    layer = bscan.layers[ref_layer].astype(np.uint16)
+                except:
+                    continue
+                
+                bscan_data = bscan._scan_raw
+                if lat == "OS":
+                    bscan_data = np.flip(bscan_data,1)
+                    layer = np.flip(layer)
+                
                 # get start position to read data
                 d_ascan = c_ascan - fovea_ascan
                 shift = min([d_ascan, 0])
-                start = - shift + (fovea_ascan - (stackwidth//2) + shift) % stackwidth
-
-                n_st = (scan_size[1] - start - max([d_ascan,0])) // stackwidth # possible number of stacks 
+                start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
+                start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
+                n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
                 
                 # create region of interest image 
@@ -254,26 +251,106 @@ class RelEZIntensity:
                 # get ez and rpe boundary 
                 imglayers = get_retinal_layers(roi) 
                 
+                #plot_layers(roi, imglayers)
+                
                 
                 for i in range(n_st):
                     
-                    if not any(np.isnan(layer[start + i * stackwidth: start + (i + 1) * stackwidth])):
-                        i_profile = self.create_intensity_profile(
-                            bscan_data[:,start + i * stackwidth: start + (i + 1) * stackwidth],
-                            layer[start + i * stackwidth: start + (i + 1) * stackwidth][:,None]
-                            )
+                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
 
+                        i_profile = np.mean(roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
+
+
+                        rpe_grad = int(
+                            np.round(
+                                np.max(imglayers["rpe"].pathY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
+
+                        ez_grad = int(
+                            np.round(
+                                np.min(imglayers["isos"].pathY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
+                        
+                        ez_peak  = ez_grad - 2 + np.where(i_profile[ez_grad - 2:ez_grad + 5] == np.max(i_profile[ez_grad - 2:ez_grad + 5]))[0][0]
+
+                        rpe_peak = find_peaks(i_profile[rpe_grad - 5:rpe_grad + 2], height=0)[0]
+                        if len(rpe_peak) > 0:
+                            rpe_peak = rpe_grad - 5 + rpe_peak[-1]
+                        else:
+                            rpe_peak = None                        
+                        
+                        
+                        elm_peak = find_peaks(i_profile[ez_peak - 10:ez_peak], height=0)[0]
+                        if len(elm_peak) > 0:
+                            elm_peak = ez_peak - 10 + elm_peak[-1]
+                        else:
+                            elm_peak = None
+                            
+                            
+# =============================================================================
+#                         plt.plot(np.arange(len(i_profile)), i_profile,
+#                                      rpe_peak, i_profile[rpe_peak], "x",
+#                                      ez_peak, i_profile[ez_peak], "x",
+#                                      elm_peak, i_profile[elm_peak], "x")
+# =============================================================================
+                        
+                        # set distances
+                        if rpe_peak:
+                            ez[start_w + i] = rpe_peak - ez_peak
+                            if elm_peak:
+                                elm[start_w + i] = rpe_peak - elm_peak
+
+
+            ez_distance = np.append(ez_distance, curr_ez_distance, axis=0)
+            elm_distance = np.append(elm_distance, curr_elm_distance, axis=0)
+            
+        
+            
+        # set all zeros to nan
+        ez_distance[ez_distance == 0] = np.nan
+        elm_distance[elm_distance == 0] = np.nan
+        
+        
+        # create Map Objects containing the created maps 
+        self.ez_distance_map = OCTMap(
+            "Distance Map RPE to EZ",
+            date.today(),
+            self.scan_size,
+            self.stackwidth,
+            None, 
+            {
+            "distance": np.nanmean(ez_distance, axis=0),
+            "std"      : np.nanstd(ez_distance, axis=0)
+            }
+            )
+        self.elm_distance_map = OCTMap(
+            "Distance Map RPE to ELM",
+            date.today(),
+            self.scan_size,
+            self.stackwidth,
+            None, 
+            {
+            "distance": np.nanmean(elm_distance, axis=0),
+            "std"      : np.nanstd(elm_distance, axis=0)
+            }
+            )
+            
         
 
 
-                        
-
 if __name__ == '__main__':
-    fovea_coords = {"017-0064": (123,768//2 +1)}
+    fovea_coords = {
+        "017-0064": (127,367),
+        "001-0001": (124,379),
+        "001-0009": (118,384)
+    }
+    
     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\vols"
     
     data = RelEZIntensity()
-    data.create_ssd_maps(path, fovea_coords, (241, 768), 10, None, ".vol")
+    data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, ".vol")
+    
+    
+    plt.imshow(data.ez_distance_map.octmap["distance"])
+    #plt.imshow(data.elm_distance_map.octmap["distance"])
     
 
 

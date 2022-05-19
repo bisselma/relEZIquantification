@@ -56,8 +56,8 @@ class Params(object):
         self.filter_0_params = np.array([5, 5, 1])
         self.filter_params = np.array([20, 20, 2])
         self.is_os_0 = 20
-        self.is_os_1 = -8
-        self.rpe_0 = 20
+        self.is_os_1 = -12
+        self.rpe_0 = 10
         self.rpe_1 = 1
 
         # adjacency matrices parameter
