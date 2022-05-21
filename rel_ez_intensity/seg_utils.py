@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from scipy.signal import savgol_filter
+from typing import Callable, Dict, List, Optional, Union, IO
+from seg_core import Path
 
 
 # flattened, unshiftList = flatten(img)
@@ -174,6 +176,28 @@ def mask_image(img, y_values, offset=0, above=False):
             elif y > y_values[x] + offset:
                 img[y, x] = 0.
     return img
+
+
+def get_flatten_seg(path: Optional[Path] = None):
+    """
+    Args:
+        path (Path): Path object with unprocessed data
+
+    Return:
+        path (path): Path object with processed data
+
+    """ 
+    del_idx = [0, len(path.pathX) -1] # get rid of frame 
+    for idx in range(1,len(path.pathX - 2)):
+        if path.pathX[idx] == path.pathX[idx+1]:
+           del_idx.append(idx)
+           
+    path.pathX = np.delete(path.pathX, del_idx)
+    path.pathY = np.delete(path.pathY, del_idx)
+
+    return path
+
+
 
 
 ################################ examples################################
