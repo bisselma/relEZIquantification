@@ -1,11 +1,13 @@
 import cv2
 import json
 import numpy as np
+from seg_utils import get_flatten_seg
 import utils as sh
 from getAdjacencyMatrix import get_adjacency_matrix, plot_layers
 from getAdjacencyMatrix import get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind, \
     ind2sub
 import matplotlib.pyplot as plt
+from seg_core import get_retinal_layers
 
 
 # path class
@@ -56,8 +58,8 @@ class Params(object):
         self.filter_0_params = np.array([5, 5, 1])
         self.filter_params = np.array([20, 20, 2])
         self.is_os_0 = 20
-        self.is_os_1 = -12
-        self.rpe_0 = 10
+        self.is_os_1 = -8
+        self.rpe_0 = 20
         self.rpe_1 = 1
 
         # adjacency matrices parameter
@@ -346,6 +348,12 @@ def get_retinal_layers(img):
         retinal_layers = get_retinal_layers_core(layer, img_new, params, retinal_layers, img)
 
     ########################################################
+
+    # delete redundant columns 
+    for layer in retinal_layers:
+        if len(layer.pathX) > sz_img[1 + 2]:
+            layer = get_flatten_seg(layer)
+
 
     return retinal_layers
     

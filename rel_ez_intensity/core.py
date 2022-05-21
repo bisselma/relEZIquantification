@@ -123,6 +123,208 @@ class RelEZIntensity:
     #
     """
 
+    def create_relezi_data(
+        self,
+        folder_path: Union[str, Path, IO] = None,
+        fovea_coords: Optional[Dict] = None,
+        scan_size: Optional[tuple] = None,
+        stackwidth: Optional[int] = None,
+        ref_layer: Optional[str] = None,
+        *args
+    ) -> None:
+
+        """
+        Args:
+            folder_path (Union[str, Path, IO]): folder path where files are storedB
+            fovea_coords (Optional[Dict]): location of fovea
+                !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
+                bscan (int): Number of B-scan including fovea
+                ascan (int): Number of A-scan including fovea
+            scan_size (Optional[tuple]): scan field size in x and y direction
+                x (int): Number of B-scans
+                y (int): Number of A-scans
+            stackwidth (Optional[int]): number of columns for a single profile
+            ref_layer (Optional[str): layer to flatten the image 
+            *args: file formats that contain the data
+        """
+        
+        if not fovea_coords:
+            fovea_coords = self.fovea_coords
+        else:
+            self.fovea_coords = fovea_coords
+        
+        if not scan_size:
+            scan_size = self.scan_size
+        else:
+            self.scan_size = scan_size
+        
+        if not stackwidth:
+            stackwidth = self.stackwidth
+        else:
+            self.stackwidth = stackwidth
+        
+        if not ref_layer:
+            ref_layer = "BM"
+
+
+        # data directories
+        if args:
+            data_dict = ut.get_list_by_format(folder_path, args)
+        else:
+            raise ValueError("no file format given")
+
+        
+        # central bscan/ascan, number of stacks (nos)
+        c_bscan = scan_size[0] // 2 + scan_size[0] % 2
+        c_ascan = scan_size[1] // 2 + scan_size[1] % 2
+        nos = scan_size[1] // stackwidth # number of stacks
+
+        ez_intensity = np.empty(shape=[0, scan_size[0], nos])
+        elm_intensity = np.empty_like(ez_intensity)
+
+        
+        # iterate  over .vol-list
+        for vol_path in data_dict[".vol"]:
+
+            # current distance map
+            curr_ez_intensity = np.zeros((1, scan_size[0], nos))
+            curr_elm_intensity = np.zeros_like(curr_ez_intensity)
+            
+            # get vol data from file
+            vol_data = ep.Oct.from_heyex_vol(vol_path)
+
+            # check if given number of b scans match with pre-defined number 
+            if vol_data._meta["NumBScans"] != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_path), vol_data._meta["NumBScans"], scan_size[0]))
+                continue
+
+            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(vol_path)]
+            
+            # change orientation from top down, subtract on from coords to keep 0-indexing of python            
+            fovea_bscan = scan_size[0] - (fovea_bscan -1) 
+
+            # laterality 
+            lat = vol_data._meta["ScanPosition"]
+
+            if lat == "OS": # if left eye is processed
+                fovea_ascan = scan_size[1] - (fovea_ascan -1)
+            else:
+                fovea_ascan = fovea_ascan -1
+
+            # delta between real fovea centre and current fovea bscan position 
+            d_bscan  = c_bscan - fovea_bscan
+
+            if not self.elm_distance_map or not self.ez_distance_map:
+                raise ValueError("Site specific disntance maps not given")
+
+
+            for bscan, ez, elm, ez_ssd, elm_ssd in zip(
+                vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
+                curr_ez_intensity[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                curr_elm_intensity[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :],
+                self.ez_distance_map[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.elm_distance_map[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :]
+                 
+                ):
+                
+
+                # layer to caculate distance. E.g. RPE (default) or BM  !!!!!!!!!!! TO BE ADDED
+                
+                try:
+                    layer = bscan.layers[ref_layer].astype(np.uint16)
+                except:
+                    continue
+                
+                bscan_data = bscan._scan_raw
+                if lat == "OS":
+                    bscan_data = np.flip(bscan_data,1)
+                    layer = np.flip(layer)
+                
+                # get start position to read data
+                d_ascan = c_ascan - fovea_ascan
+                shift = min([d_ascan, 0])
+                start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
+                start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
+                n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
+                
+                
+                # create region of interest image 
+                roi = np.zeros((50,scan_size[1])).astype(np.float32)
+                
+                for i, l in enumerate(layer):
+                    if l < 496 and l > 0:
+                        roi[:,i] = bscan_data[l-40:l+10,i]
+                        
+            
+                # get ez and rpe boundary 
+                # imglayers = get_retinal_layers(roi) 
+                
+                #plot_layers(roi, imglayers)
+                
+                
+                for i in range(n_st):
+                    
+                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
+
+                        i_profile =  np.zeros((50, 1)).astype(np.float32) # intensity profile
+                        for i, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                            if l < 496 and l > 0:
+                                i_profile = i_profile + bscan_data[l-40:l+10,i]
+                        i_profile/=stackwidth
+                
+
+                        
+                            
+                            
+# =============================================================================
+#                         plt.plot(np.arange(len(i_profile)), i_profile,
+#                                      rpe_peak, i_profile[rpe_peak], "x",
+#                                      ez_peak, i_profile[ez_peak], "x",
+#                                      elm_peak, i_profile[elm_peak], "x")
+# =============================================================================
+                        
+                        # set distances
+                        if rpe_peak:
+                            ez[start_w + i] = rpe_peak - ez_peak
+                            if elm_peak:
+                                elm[start_w + i] = rpe_peak - elm_peak
+
+
+            ez_intensity = np.append(ez_intensity, curr_ez_intensity, axis=0)
+            elm_intensity = np.append(elm_intensity, curr_elm_intensity, axis=0)
+            
+        
+            
+        # set all zeros to nan
+        ez_intensity[ez_intensity == 0] = np.nan
+        elm_intensity[elm_intensity == 0] = np.nan
+        
+        
+        # create Map Objects containing the created maps 
+        self.ez_distance_map = OCTMap(
+            "Distance Map RPE to EZ",
+            date.today(),
+            self.scan_size,
+            self.stackwidth,
+            None, 
+            {
+            "distance": np.nanmean(ez_distance, axis=0),
+            "std"      : np.nanstd(ez_distance, axis=0)
+            }
+            )
+        self.elm_distance_map = OCTMap(
+            "Distance Map RPE to ELM",
+            date.today(),
+            self.scan_size,
+            self.stackwidth,
+            None, 
+            {
+            "distance": np.nanmean(elm_distance, axis=0),
+            "std"      : np.nanstd(elm_distance, axis=0)
+            }
+            )
+    
 
     def create_ssd_maps(
         self,
