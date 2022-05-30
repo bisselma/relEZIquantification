@@ -14,6 +14,8 @@ from seg_core import get_retinal_layers
 from scipy.stats import moment
 from scipy.signal import find_peaks
 from datetime import date
+import pickle
+import os
 
 
 class OCTMap:
@@ -104,7 +106,9 @@ class RelEZIntensity:
             elm_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
-            patients: Optional[List[Patient]] = None
+            patients: Optional[List[Patient]] = None,
+            base_layer: Optional[str] = None
+            
             ) -> None:
         self.fovea_coords = fovea_coords
         self.ez_distance_map = ez_distance_map
@@ -112,7 +116,9 @@ class RelEZIntensity:
         self.scan_size = scan_size
         self.stackwidth = stackwidth
         self.patients = patients
-
+        self.base_layer = base_layer 
+        self.ssd_dir = None
+        
     """
     standard methods
     #
@@ -120,16 +126,117 @@ class RelEZIntensity:
     #
     #
     #
-    #
     """
 
-    def create_relezi_data(
+    def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
+        
+
+
+        # find ez and elm peaks
+        left_border = int(np.round(rpe_peak - elm_mean - 2. * elm_std))
+        peaks = left_border + find_peaks(i_profile[left_border : int(rpe_peak)])[0]
+                        
+        if 2 * ez_mean < 1:
+            ez_left = int(np.round(rpe_peak - ez_mean - 1))
+            ez_right = int(np.round(rpe_peak - ez_mean + 1))
+        else:
+            ez_left = int(np.round(rpe_peak - ez_mean - 2. * ez_std)) 
+            ez_right = int(np.round(rpe_peak - ez_mean + 2. * ez_std)) 
+                        
+        try:
+            test = np.logical_and(peaks >= ez_left, peaks <= ez_right)
+            ez_peaks = peaks[np.logical_and(peaks >= ez_left, peaks <= ez_right)][0]
+        except:
+            ez_peaks = 0
+
+        if 2 * elm_mean < 1:
+            elm_left = int(np.round(rpe_peak - elm_mean - 1))
+            elm_right = int(np.round(rpe_peak - elm_mean + 1))
+        else:
+            elm_left = int(np.round(rpe_peak - elm_mean - 2. * elm_std)) 
+            if ez_peaks <= int(np.round(rpe_peak - elm_mean + 2. * elm_std)):
+                elm_right = ez_peaks -1 
+            else:
+                elm_right = int(np.round(rpe_peak - elm_mean + 2. * elm_std)) 
+        
+        try:                
+            elm_peaks = peaks[np.logical_and(peaks >= elm_left, peaks <= elm_right)][0]
+        except:
+            elm_peaks = 0 
+            
+            
+        return ez_peaks, elm_peaks
+
+    def get_rpe_peak(self, i_profile):
+        peaks = find_peaks(i_profile[30:40])[0]
+        if len(peaks) > 0:
+            return 30 + peaks[np.where(i_profile[30 + peaks] == max(i_profile[30 + peaks]))[0]][-1]
+        else:
+            return 35
+    
+    def save_ssd(
+            self,
+            directory: Union[str, Path, IO, None] = None
+            ):
+        
+        """
+        Args:
+            directory (Union[str, Path, IO, None]): directory where ssd maps should be stored
+        
+        save OCTMap Object in pkl-file with the order ez before elm
+        
+        """
+        
+        if not directory:
+            directory = ""
+            
+        sdd_file_path = os.path.join(
+                directory, "ssd_" +
+                            self.ez_distance_map.date_of_origin.strftime("%Y-%m-%d") 
+                            + ".pkl")
+        
+        with open(sdd_file_path, "wb") as outp:
+            pickle.dump(self.ez_distance_map, outp, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.elm_distance_map, outp, pickle.HIGHEST_PROTOCOL)
+            
+        self.ssd_dir = sdd_file_path
+   
+    
+    def load_ssd(
+            self,
+            directory: Union[str, Path, IO, None] = None
+            ):
+        
+        if directory:
+            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            for file in obj_list[".pkl"]:
+                with open(file, 'rb') as inp:
+                    tmp_obj = pickle.load(inp)
+                    if type(tmp_obj) is OCTMap:
+                        self.ez_distance_map = tmp_obj
+                        self.elm_distance_map = pickle.load(inp) # load next object from file
+                                      
+        elif self.ssd_dir:
+            self.ez_distance_map = pickle.load(open(self.ssd_dir["ez"], "r"))
+            self.elm_distance_map = pickle.load(open(self.ssd_dir["ez"], "r"))
+        
+        else:
+            raise ValueError("No directory to load ssd maps is given")
+        
+    
+        
+    """
+    
+    """
+    def get_data(
         self,
         folder_path: Union[str, Path, IO] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
+        base_layer: Optional[str] = None,
+        area_exclusion: Optional[str] = None,
         *args
     ) -> None:
 
@@ -144,7 +251,10 @@ class RelEZIntensity:
                 x (int): Number of B-scans
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
-            ref_layer (Optional[str): layer to flatten the image 
+            ref_layer (Optional[str]): layer to flatten the image 
+            base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
+            area_exclusion (Optional[str]): Method to determine area of exclusion 
+                                            # The methods are project-dependent and can be updated at a later date
             *args: file formats that contain the data
         """
         
@@ -165,6 +275,22 @@ class RelEZIntensity:
         
         if not ref_layer:
             ref_layer = "BM"
+        
+        if not base_layer:
+            if not self.base_layer:
+                base_layer = self.base_layer = "vol"
+            else:
+                base_layer = self.base_layer
+        else:
+            self.base_layer = base_layer
+
+        if not area_exclusion:
+            if not self.area_exclusion:
+                area_exclusion = self.area_exclusion = "default"
+            else:
+                area_exclusion = self.area_exclusion
+        else:
+            self.area_exclusion = area_exclusion
 
 
         # data directories
@@ -172,6 +298,12 @@ class RelEZIntensity:
             data_dict = ut.get_list_by_format(folder_path, args)
         else:
             raise ValueError("no file format given")
+
+        if base_layer == "masks":
+            mask_dict = ut.get_mask_list(folder_path)
+
+        if area_exclusion == "rpedc":
+            ae_dict = ut.get_list_by_format(folder_path, ".tif")
 
         
         # central bscan/ascan, number of stacks (nos)
@@ -184,26 +316,39 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_path in data_dict[".vol"]:
+        for vol_id in data_dict[".vol"]:
 
             # current distance map
-            curr_ez_intensity = np.zeros((1, scan_size[0], nos))
+            curr_ez_intensity = np.zeros((scan_size[0], nos))
             curr_elm_intensity = np.zeros_like(curr_ez_intensity)
             
+            
             # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(vol_path)
+            vol_data = ep.Oct.from_heyex_vol(data_dict[".vol"][vol_id])
 
+            
             # check if given number of b scans match with pre-defined number 
             if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_path), vol_data._meta["NumBScans"], scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[".vol"][vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
                 continue
+            
+            
+            # check if mask dict contains vol id
+            if base_layer == "masks":
+                if vol_id in mask_dict.keys():
+                    mask_list = mask_dict[vol_id]
+                else:
+                    print("ID: %s considered segmentation mask not exist" % vol_id)
 
+            
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(vol_path)]
+            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+            
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - (fovea_bscan -1) 
-
+            
+    
             # laterality 
             lat = vol_data._meta["ScanPosition"]
 
@@ -212,34 +357,39 @@ class RelEZIntensity:
             else:
                 fovea_ascan = fovea_ascan -1
 
+            
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
 
             if not self.elm_distance_map or not self.ez_distance_map:
-                raise ValueError("Site specific disntance maps not given")
+                raise ValueError("Site specific distance maps not given")
 
 
-            for bscan, ez, elm, ez_ssd, elm_ssd in zip(
+            for bscan, ez, elm, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
-                curr_ez_intensity[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                curr_elm_intensity[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :],
-                self.ez_distance_map[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.elm_distance_map[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :]
-                 
+                curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.ez_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.ez_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
+                self.elm_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.elm_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])) # read 
                 ):
                 
 
-                # layer to caculate distance. E.g. RPE (default) or BM  !!!!!!!!!!! TO BE ADDED
-                
-                try:
-                    layer = bscan.layers[ref_layer].astype(np.uint16)
-                except:
-                    continue
-                
+                if self.base_layer == None or self.base_layer == "vol":
+                    try:
+                        layer = bscan.layers[ref_layer].astype(np.uint16)
+                    except:
+                        continue
+                if self.base_layer == "masks":
+                    layer = ut.get_seg_by_mask(mask_list[idx], 10) # the last argument depends on the number of layer classes of the segmentation mask
+
                 bscan_data = bscan._scan_raw
                 if lat == "OS":
                     bscan_data = np.flip(bscan_data,1)
                     layer = np.flip(layer)
+                
                 
                 # get start position to read data
                 d_ascan = c_ascan - fovea_ascan
@@ -247,6 +397,7 @@ class RelEZIntensity:
                 start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
                 start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
+                
                 
                 
                 # create region of interest image 
@@ -258,41 +409,57 @@ class RelEZIntensity:
                         
             
                 # get ez and rpe boundary 
-                # imglayers = get_retinal_layers(roi) 
+                imglayers = get_retinal_layers(roi) 
                 
-                #plot_layers(roi, imglayers)
+                plot_layers(roi, imglayers)                
                 
-                
+                # iterate over bscans
                 for i in range(n_st):
                     
+                    
                     if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
-
-                        i_profile =  np.zeros((50, 1)).astype(np.float32) # intensity profile
-                        for i, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                        
+                        
+                        # excluding section
+                        # excluding condition can be 
+                            # a thickness map of rpedc
+                            # a ez-loss map like in mactel project
+                            # a thickness determine by the distance between bm and rpe based on segmentation layer
+                            
+                        
+                        
+                        i_profile =  np.zeros((50, 1)).astype(np.float32)[:,0] # intensity profile
+                        for idx, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                             if l < 496 and l > 0:
-                                i_profile = i_profile + bscan_data[l-40:l+10,i]
-                        i_profile/=stackwidth
-                
-
+                                i_profile = i_profile + bscan_data[l-40:l+10,start_r + i * stackwidth + idx]
+                        i_profile/= self.stackwidth
                         
-                            
-                            
-# =============================================================================
-#                         plt.plot(np.arange(len(i_profile)), i_profile,
-#                                      rpe_peak, i_profile[rpe_peak], "x",
-#                                      ez_peak, i_profile[ez_peak], "x",
-#                                      elm_peak, i_profile[elm_peak], "x")
-# =============================================================================
                         
-                        # set distances
-                        if rpe_peak:
-                            ez[start_w + i] = rpe_peak - ez_peak
-                            if elm_peak:
-                                elm[start_w + i] = rpe_peak - elm_peak
+                        # get rpe peak
+                        rpe_peak = self.get_rpe_peak(i_profile)
+                        
+                        ez_peak, elm_peak = self.get_ez_elm_peak(i_profile,
+                                                            float(rpe_peak),
+                                                            ez_ssd_mean[start_w + i],
+                                                            ez_ssd_std[start_w + i],
+                                                            elm_ssd_mean[start_w + i],
+                                                            elm_ssd_std[start_w + i])
+
+                        ez[start_w + i] = ez_peak
+                        elm[start_w + i] = elm_peak
+                        
+                        
+                        if ez_peak != 0 and elm_peak !=0:
+                            plt.plot(np.arange(len(i_profile)), i_profile,
+                                     rpe_peak, i_profile[rpe_peak], "x",
+                                     ez_peak, i_profile[ez_peak], "x",
+                                     elm_peak, i_profile[elm_peak], "x")
+                        
 
 
-            ez_intensity = np.append(ez_intensity, curr_ez_intensity, axis=0)
-            elm_intensity = np.append(elm_intensity, curr_elm_intensity, axis=0)
+
+            curr_ez_intensity
+            curr_elm_intensity
             
         
             
@@ -309,21 +476,11 @@ class RelEZIntensity:
             self.stackwidth,
             None, 
             {
-            "distance": np.nanmean(ez_distance, axis=0),
-            "std"      : np.nanstd(ez_distance, axis=0)
+            "distance": np.nanmean(ez_intensity, axis=0),
+            "std"      : np.nanstd(ez_intensity, axis=0)
             }
             )
-        self.elm_distance_map = OCTMap(
-            "Distance Map RPE to ELM",
-            date.today(),
-            self.scan_size,
-            self.stackwidth,
-            None, 
-            {
-            "distance": np.nanmean(elm_distance, axis=0),
-            "std"      : np.nanstd(elm_distance, axis=0)
-            }
-            )
+
     
 
     def create_ssd_maps(
@@ -333,6 +490,7 @@ class RelEZIntensity:
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
+        base_layer: Optional[str] = None,
         *args
     ) -> None:
 
@@ -347,7 +505,10 @@ class RelEZIntensity:
                 x (int): Number of B-scans
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
-            ref_layer (Optional[str): layer to flatten the image 
+            ref_layer (Optional[str]): layer to flatten the image 
+            base_layer (Optional[str]): pre segmented layer 
+                "masks": if segmentation mask is used
+                "vol": if segmentation by .vol-file is used
             *args: file formats that contain the data
         """
         
@@ -365,6 +526,13 @@ class RelEZIntensity:
             self.stackwidth = stackwidth
         if not ref_layer:
             ref_layer = "BM"
+        if not base_layer:
+            if not self.base_layer:
+                base_layer = self.base_layer = "vol"
+            else:
+                base_layer = self.base_layer
+        else:
+            self.base_layer = base_layer
 
 
         # data directories
@@ -372,6 +540,9 @@ class RelEZIntensity:
             data_dict = ut.get_list_by_format(folder_path, args)
         else:
             raise ValueError("no file format given")
+
+        if base_layer == "masks":
+            mask_dict = ut.get_mask_list(folder_path)
 
         
         # central bscan/ascan, number of stacks (nos)
@@ -384,22 +555,31 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_path in data_dict[".vol"]:
+        for vol_id in data_dict[".vol"]:
 
             # current distance map
-            curr_ez_distance = np.zeros((1, scan_size[0], nos))
-            curr_elm_distance = np.zeros_like(curr_ez_distance)
+            curr_ez_distance = np.empty((1, scan_size[0], nos))
+            curr_ez_distance[:] = np.nan
+            curr_elm_distance = np.full_like(curr_ez_distance, np.nan)
             
             # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(vol_path)
+            vol_data = ep.Oct.from_heyex_vol(data_dict[".vol"][vol_id])
+
 
             # check if given number of b scans match with pre-defined number 
             if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_path), vol_data._meta["NumBScans"], scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[".vol"][vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
                 continue
 
+            # check if mask dict contains vol id
+            if base_layer == "masks":
+                if vol_id in mask_dict.keys():
+                    mask_list = mask_dict[vol_id]
+                else:
+                    print("ID: %s considered segmentation mask not exist" % vol_id)
+
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(vol_path)]
+            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - (fovea_bscan -1) 
@@ -415,19 +595,21 @@ class RelEZIntensity:
             d_bscan  = c_bscan - fovea_bscan
 
 
-            for bscan, ez, elm in zip(
+            for bscan, ez, elm, idx in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
                 curr_ez_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :] # write
+                curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0]))
                 ):
                 
 
-                # layer to caculate distance. E.g. RPE (default) or BM  !!!!!!!!!!! TO BE ADDED
-                
-                try:
-                    layer = bscan.layers[ref_layer].astype(np.uint16)
-                except:
-                    continue
+                if self.base_layer == None or self.base_layer == "vol":
+                    try:
+                        layer = bscan.layers[ref_layer].astype(np.uint16)
+                    except:
+                        continue
+                if self.base_layer == "masks":
+                    layer = ut.get_seg_by_mask(mask_list[idx], 10)
                 
                 bscan_data = bscan._scan_raw
                 if lat == "OS":
@@ -453,7 +635,8 @@ class RelEZIntensity:
                 # get ez and rpe boundary 
                 imglayers = get_retinal_layers(roi) 
                 
-                #plot_layers(roi, imglayers)
+                #if idx == 123:
+                 #   plot_layers(roi, imglayers)
                 
                 
                 for i in range(n_st):
@@ -465,11 +648,11 @@ class RelEZIntensity:
 
                         rpe_grad = int(
                             np.round(
-                                np.max(imglayers["rpe"].pathY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
+                                np.max(imglayers["rpe"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
 
                         ez_grad = int(
                             np.round(
-                                np.min(imglayers["isos"].pathY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
+                                np.min(imglayers["isos"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
                         
                         ez_peak  = ez_grad - 2 + np.where(i_profile[ez_grad - 2:ez_grad + 5] == np.max(i_profile[ez_grad - 2:ez_grad + 5]))[0][0]
 
@@ -507,49 +690,72 @@ class RelEZIntensity:
         
             
         # set all zeros to nan
-        ez_distance[ez_distance == 0] = np.nan
-        elm_distance[elm_distance == 0] = np.nan
-        
+        ez_std = np.nanstd(ez_distance, axis=0)
+        ez_std[ez_std == np.nan] = 0.
+        ez_dist = np.nanmean(ez_distance, axis=0)
+        ez_dist[ez_dist == np.nan] = 0.
+
+        elm_std = np.nanstd(elm_distance, axis=0)
+        elm_std[elm_std == np.nan] = 0.
+        elm_dist = np.nanmean(elm_distance, axis=0)
+        elm_dist[elm_dist == np.nan] = 0.       
         
         # create Map Objects containing the created maps 
         self.ez_distance_map = OCTMap(
-            "Distance Map RPE to EZ",
+            "rpe_ez",
             date.today(),
             self.scan_size,
             self.stackwidth,
             None, 
             {
-            "distance": np.nanmean(ez_distance, axis=0),
-            "std"      : np.nanstd(ez_distance, axis=0)
+            "distance" : ez_dist,
+            "std"      : ez_std
             }
             )
         self.elm_distance_map = OCTMap(
-            "Distance Map RPE to ELM",
+            "rpe_elm",
             date.today(),
             self.scan_size,
             self.stackwidth,
             None, 
             {
-            "distance": np.nanmean(elm_distance, axis=0),
-            "std"      : np.nanstd(elm_distance, axis=0)
+            "distance" : elm_dist,
+            "std"      : elm_std
             }
             )
             
         
 
 
+
 if __name__ == '__main__':
+    
     fovea_coords = {
-        "017-0064": (127,367),
-        "001-0001": (124,379),
-        "001-0009": (118,384)
+        #"001-0044": (121,380),
+        #"001-0046": (125,379),
+        #"001-0049": (123, 372),
+        "001-0059": (112, 359)
     }
+# =============================================================================
+#     fovea_coords = {
+#             "001-0006": (121,384),
+#             "001-0007": (121,368),
+#             "001-0008": (120,380),
+#             "001-0009": (118,384),
+#             "001-0010": (123,385)
+#     }
+# =============================================================================
     
-    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\vols"
-    
+    path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
+    path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
     data = RelEZIntensity()
-    data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, ".vol")
+    #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
+
+    path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
+    #data.save_ssd(path_ssd)
+    data.load_ssd(path_ssd)
     
+    data.get_data(path_i, fovea_coords, (241, 768), 9, None, "masks", ".vol")
     
     plt.imshow(data.ez_distance_map.octmap["distance"])
     #plt.imshow(data.elm_distance_map.octmap["distance"])
