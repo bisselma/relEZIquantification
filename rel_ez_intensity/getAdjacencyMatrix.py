@@ -141,7 +141,7 @@ def plot_layers(img, paths):
     for path in paths:
         lines.append(mlines.Line2D([], [], color= color[color_index], marker='_',
                            markersize=5, label=paths[path].name))
-        for ind in paths[path].path:
+        for ind in paths[path].layer:
             if ind % width != 0 and ind % width != width-1:
             # set value in image to color_index to trace the path
                 cooY, cooX = ind2sub(layers.shape, ind)
@@ -151,7 +151,7 @@ def plot_layers(img, paths):
 
 
     # Show layers
-    plt.imshow(img, cmap='gray')
+    plt.imshow(img, cmap='gray', vmin=0, vmax=1)
     plt.imshow(layers, cmap='gray', alpha=1)
     plt.legend(handles=lines, loc='lower right')
     plt.show()

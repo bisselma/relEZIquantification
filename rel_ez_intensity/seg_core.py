@@ -7,18 +7,17 @@ from getAdjacencyMatrix import get_adjacency_matrix, plot_layers
 from getAdjacencyMatrix import get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind, \
     ind2sub
 import matplotlib.pyplot as plt
-from seg_core import get_retinal_layers
 
 
 # path class
-class Path(object):
+class Layer(object):
 
-    def __init__(self, name, path, pathY, pathX):
+    def __init__(self, name, layer, layerY, layerX):
         self.name = name
-        self.path = path
-        self.pathY = pathY
-        self.pathX = pathX
-        self.pathYmean = np.mean(self.pathY)
+        self.layer = layer
+        self.layerY = layerY
+        self.layerX = layerX
+        self.layerYmean = np.mean(self.layerY)
 
     def getName(self):
         return self.name
@@ -26,30 +25,30 @@ class Path(object):
     def setName(self, name):
         self.name = name
 
-    def getPath(self):
-        return self.path
+    def getLayer(self):
+        return self.layer
 
-    def setPath(self, path):
-        self.path = path
-        self.pathXmean = np.mean(self.path)
+    def setLayer(self, layer):
+        self.layer = layer
+        self.layerXmean = np.mean(self.layer)
 
-    def getPathY(self):
-        return self.pathY
+    def getLayerY(self):
+        return self.layerY
 
-    def setPathY(self, pathY):
-        self.pathY = pathY
+    def setLayerY(self, layerY):
+        self.layerY = layerY
 
-    def getPathX(self):
-        return self.pathX
+    def getLayerX(self):
+        return self.layerX
 
-    def setPathX(self, pathX):
-        self.pathX = pathX
+    def setLayerX(self, layerX):
+        self.layerX = layerX
 
-    def getPathYmean(self):
-        return self.pathYmean
+    def getLayerYmean(self):
+        return self.layerYmean
 
     def JSON(self):
-        return "{\"name\": \"" + self.name + "\"," + "\"path_x\": " + json.dumps((self.pathX.tolist())) + "," + "\"path_y\": " + json.dumps((self.pathY.tolist())) + "}"
+        return "{\"name\": \"" + self.name + "\"," + "\"layer_x\": " + json.dumps((self.layerX.tolist())) + "," + "\"path_y\": " + json.dumps((self.layerY.tolist())) + "}"
 
 # This Object contains all the neccessary parameters of the segmentation 
 class Params(object):
@@ -59,7 +58,7 @@ class Params(object):
         self.filter_params = np.array([20, 20, 2])
         self.is_os_0 = 20
         self.is_os_1 = -8
-        self.rpe_0 = 20
+        self.rpe_0 = 13
         self.rpe_1 = 1
 
         # adjacency matrices parameter
@@ -79,111 +78,6 @@ class Params(object):
         self.adjMmW_f = []
 
  
-
-def getHyperReflectiveLayers(inputImg, param):
-
-    # initiate parameters
-    if param.shrink_scale is None:
-        shrinkScale = 0.2
-    else:
-        shrinkScale = param.shrink_scale
-
-    if param.offsets is None:
-        offsets = np.arange(-20, 21)
-    else:
-        offsets = param.offsets
-
-    # resize the image.
-    szImg = inputImg.size
-    resizedImg = cv2.resize(inputImg, dsize=None, fx=shrinkScale, fy=shrinkScale,
-                            interpolation=cv2.INTER_LINEAR)
-
-    # create adjacency matrices
-    adjMatrixW, adjMatrixMW, adjMAsub, adjMBsub, adjMW, adjMmW, newImg = get_adjacency_matrix(
-        resizedImg)
-
-    # create roi for getting shortestest path based on vertical gradient image.
-    # get  vertical gradient image
-    gy = cv2.Sobel(newImg, cv2.CV_64F, 0, 1, ksize=5)
-    # normalize gradient
-    gy = (gy - np.amin(gy))/(np.amax(gy)-np.amin(gy))
-
-    # create binary mask
-    szImgNew = newImg.shape
-    roiImg = np.zeros(szImgNew)
-    # set value 1 where pixel value is greater than the mean value of the gradient
-    roiImg[gy > np.mean(gy[:])] = 1
-
-    # find 2 layers
-    paths = np.empty(2, dtype=object)
-    count = 0
-
-    while count < len(paths):
-
-        # add columns of value 1 at both ends of the image
-        roiImg[:, 0] = 1
-        roiImg[:, -1] = 1
-
-        # include only region of interst in the adjacency matrix
-        ind1, ind2 = np.nonzero(roiImg[:] == 1)   # find all pixels equal 1
-        indices = sub2ind(roiImg.shape, ind1, ind2)
-        # Test whether each element of first array is also present in a second array
-        includeA = np.isin(adjMAsub, indices)
-        includeB = np.isin(adjMBsub, indices)
-        keepInd = np.logical_and(includeA, includeB)
-
-        # compile adjacency matrix
-        adjMatrix = sparse_matrix(
-            adjMW[keepInd], adjMAsub[keepInd], adjMBsub[keepInd], newImg)
-
-        # apply Dijkstra algorithm
-        dist_matrix, predecessors = find_shortest_path(adjMatrix)
-
-        # construct path from the predecessor nodes retrieved from Dijkstra algorithm
-        path = get_path(predecessors, len(dist_matrix)-1)
-
-        # get rid of first few points and last few points
-        pathY, pathX = ind2sub(newImg.shape, path)
-        pathY = pathY[np.gradient(pathX) != 0]
-        pathX = pathX[np.gradient(pathX) != 0]
-        path = sub2ind(inputImg.shape,pathY,pathX)
-
-        # block the obtained path and abit around it
-        pathYArr = np.tile(pathY, (len(offsets), len(offsets)))
-        pathXArr = np.tile(pathX, (len(offsets), len(offsets)))
-
-
-        for i in range(offsets.size):
-            pathYArr[i,:] = pathYArr[i,:] + offsets[i]
-            #pathXArr[i, :] = pathXArr[i, :] + offsets[i]
-
-        #pathXArr = pathXArr[np.logical_and(pathYArr >= 0, pathYArr < szImgNew[1])]
-        pathYArr = pathYArr[np.logical_and(
-            pathYArr >= 0, pathYArr < szImgNew[0])]
-        pathXArr = pathXArr[np.logical_and(
-            pathXArr >= 0, pathXArr < szImgNew[1])]
-
-        pathArr = sub2ind(szImgNew, pathYArr, pathXArr)
-
-        roiImg[pathYArr, pathXArr] = 0
-
-        # plot the masked path
-        #plot_layers(gy, [pathArr])
-
-        paths[count] = Path("", path, pathY[1:-1], pathX[2:])
-
-        count += 1
-
-    # define the name of the detected layer boundary based on the mean y value. ILM lies always above IS-OS
-
-    if paths[0].getPathYmean() > paths[1].getPathYmean():
-        paths[0].name = 'isos'
-        paths[1].name = 'ilm'
-    else:
-        paths[0].name = 'ilm'
-        paths[1].name = 'isos'
-
-    return paths
 
 
 # This function is used in get_retinal_layers
@@ -214,12 +108,12 @@ def get_retinal_layers_core(layer_name, img, params, paths_list, shift_array):
 
 
         else:
-            ind_pathX = np.where(paths_list['rpe'].pathX == k)
+            ind_pathX = np.where(paths_list['rpe'].layerX == k)
             ind_pathX = ind_pathX[0].reshape(1, ind_pathX[0].size)
 
 
             start_ind = params.is_os_0  
-            end_ind = paths_list['rpe'].pathY[ind_pathX[0, 0]] + params.is_os_1
+            end_ind = paths_list['rpe'].layerY[ind_pathX[0, 0]] + params.is_os_1
 
 
 
@@ -293,9 +187,9 @@ def get_retinal_layers_core(layer_name, img, params, paths_list, shift_array):
 # =============================================================================
 
     if layer_name == "rpe":
-        paths_list["rpe"] = Path(layer_name, path, pathY, pathX)
+        paths_list["rpe"] = Layer(layer_name, path, pathY, pathX)
     else:
-        paths_list["isos"] = Path(layer_name, path, pathY, pathX)
+        paths_list["isos"] = Layer(layer_name, path, pathY, pathX)
     
     return paths_list
 
@@ -351,8 +245,8 @@ def get_retinal_layers(img):
 
     # delete redundant columns 
     for layer in retinal_layers:
-        if len(layer.pathX) > sz_img[1 + 2]:
-            layer = get_flatten_seg(layer)
+        if len(retinal_layers[layer].layerX) > sz_img[1] + 2:
+            retinal_layers[layer] = get_flatten_seg(retinal_layers[layer])
 
 
     return retinal_layers
