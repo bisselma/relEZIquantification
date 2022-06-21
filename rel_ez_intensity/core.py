@@ -13,9 +13,12 @@ from getAdjacencyMatrix import plot_layers
 from seg_core import get_retinal_layers
 from scipy.stats import moment
 from scipy.signal import find_peaks
+from scipy.ndimage import shift
 from datetime import date
 import pickle
 import os
+import cv2
+import xlsxwriter as xls
 
 
 class OCTMap:
@@ -23,7 +26,7 @@ class OCTMap:
     def __init__(
             self,
             name: str,
-            date_of_origin: Optional[date] = None,
+            date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
             laterality: Optional[str] = None,
@@ -106,7 +109,7 @@ class RelEZIntensity:
             elm_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
-            patients: Optional[List[Patient]] = None,
+            patients: Optional[Dict] = {},
             base_layer: Optional[str] = None
             
             ) -> None:
@@ -118,6 +121,9 @@ class RelEZIntensity:
         self.patients = patients
         self.base_layer = base_layer 
         self.ssd_dir = None
+        self.area_exclusion = None
+        self.mean_rpedc_map = None 
+        self.mrpedc_dir = None
         
     """
     standard methods
@@ -130,49 +136,125 @@ class RelEZIntensity:
 
     def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
         
+        
+        # What to do if 2 peaks are found in the search 
+            # Suggested to set the value to invalid. !!!
 
+        if np.isnan([ez_mean, ez_std, elm_mean, elm_std]).any():
+            return 0, 0
 
         # find ez and elm peaks
         left_border = int(np.round(rpe_peak - elm_mean - 2. * elm_std))
         peaks = left_border + find_peaks(i_profile[left_border : int(rpe_peak)])[0]
                         
-        if 2 * ez_mean < 1:
+        if 2 * ez_std < 1:
             ez_left = int(np.round(rpe_peak - ez_mean - 1))
             ez_right = int(np.round(rpe_peak - ez_mean + 1))
         else:
             ez_left = int(np.round(rpe_peak - ez_mean - 2. * ez_std)) 
             ez_right = int(np.round(rpe_peak - ez_mean + 2. * ez_std)) 
                         
-        try:
-            test = np.logical_and(peaks >= ez_left, peaks <= ez_right)
-            ez_peaks = peaks[np.logical_and(peaks >= ez_left, peaks <= ez_right)][0]
-        except:
-            ez_peaks = 0
+        
+        ez_peaks = peaks[np.logical_and(peaks >= ez_left, peaks <= ez_right)]
 
-        if 2 * elm_mean < 1:
+
+        # 3 possible cases 
+        # first: no peak was found
+        if len(ez_peaks) == 0:
+            return 0, 0
+        # second: the estimated valid case where only one peaks was found 
+        elif len(ez_peaks) == 1:
+            ez_peak = ez_peaks[0]
+        # third: invalid case if more then one peak was found
+        else:
+            return 0, 0
+        
+        
+
+        if 2 * elm_std < 1:
             elm_left = int(np.round(rpe_peak - elm_mean - 1))
             elm_right = int(np.round(rpe_peak - elm_mean + 1))
         else:
             elm_left = int(np.round(rpe_peak - elm_mean - 2. * elm_std)) 
-            if ez_peaks <= int(np.round(rpe_peak - elm_mean + 2. * elm_std)):
+            if ez_peak <= int(np.round(rpe_peak - elm_mean + 2. * elm_std)):
                 elm_right = ez_peaks -1 
             else:
                 elm_right = int(np.round(rpe_peak - elm_mean + 2. * elm_std)) 
         
-        try:                
-            elm_peaks = peaks[np.logical_and(peaks >= elm_left, peaks <= elm_right)][0]
-        except:
-            elm_peaks = 0 
+                        
+        elm_peaks = peaks[np.logical_and(peaks >= elm_left, peaks <= elm_right)]
+         
+        # 3 possible cases 
+        # first: no peak was found
+        if len(elm_peaks) == 0:
+            return ez_peak, 0
+        # second: the estimated valid case where only one peaks was found 
+        elif len(elm_peaks) == 1:
+            elm_peak = elm_peaks[0]
+        # third: invalid case if more then one peak was found
+        else:
+            return ez_peak, 0
             
-            
-        return ez_peaks, elm_peaks
+        return ez_peak, elm_peak
 
     def get_rpe_peak(self, i_profile):
-        peaks = find_peaks(i_profile[30:40])[0]
+        peaks = find_peaks(i_profile[35:45])[0]
         if len(peaks) > 0:
-            return 30 + peaks[np.where(i_profile[30 + peaks] == max(i_profile[30 + peaks]))[0]][-1]
+            return 35 + peaks[np.where(i_profile[35 + peaks] == max(i_profile[35 + peaks]))[0]][-1]
         else:
-            return 35
+            return 38
+    
+    
+    
+    def save_mean_rpedc_map(            
+            self,
+            directory: Union[str, Path, IO, None] = None
+            ):
+            
+            """
+            Args:
+                directory (Union[str, Path, IO, None]): directory where mean_rpedc_map should be stored
+            
+            save OCTMap Object in pkl-file 
+            """
+            
+            if not directory:
+                directory = ""
+                
+            mrpedc_file_path = os.path.join(
+                    directory, "mean_rpedc_" +
+                                self.mean_rpedc_map.date_of_origin.strftime("%Y-%m-%d") 
+                                + ".pkl")
+            
+            with open(mrpedc_file_path, "wb") as outp:
+                pickle.dump(self.mean_rpedc_map, outp, pickle.HIGHEST_PROTOCOL)
+                pickle.dump(self.mean_rpedc_map, outp, pickle.HIGHEST_PROTOCOL)
+                
+            self.mrpedc_dir = mrpedc_file_path
+
+    def load_mean_rpedc_map(
+            self,
+            directory: Union[str, Path, IO, None] = None,
+            filename: Optional[str] = None
+            ):
+        
+        if not filename:
+            filename = "mean_rpedc"
+        
+        if directory:
+            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            for file in obj_list[".pkl"]:
+                if filename in file:
+                    with open(file, 'rb') as inp:
+                        tmp_obj = pickle.load(inp)
+                        if type(tmp_obj) is OCTMap:
+                            self.mean_rpedc_map = tmp_obj
+                     
+        elif self.mrpedc_dir:
+            self.mean_rpedc_map = pickle.load(open(self.mrpedc_dir, "r"))
+        
+        else:
+            raise ValueError("No directory to load mean_rpedc_map maps is given\n Try to create mean_rpedc_map first by method 'create_mean_rpedc_map()'")
     
     def save_ssd(
             self,
@@ -204,24 +286,30 @@ class RelEZIntensity:
     
     def load_ssd(
             self,
-            directory: Union[str, Path, IO, None] = None
+            directory: Union[str, Path, IO, None] = None,
+            filename: Optional[str] = None
             ):
         
+        if not filename:
+            filename = "ssd"
+            
+            
         if directory:
             obj_list = ut.get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
-                with open(file, 'rb') as inp:
-                    tmp_obj = pickle.load(inp)
-                    if type(tmp_obj) is OCTMap:
-                        self.ez_distance_map = tmp_obj
-                        self.elm_distance_map = pickle.load(inp) # load next object from file
-                                      
+                if filename in file:
+                    with open(file, 'rb') as inp:
+                        tmp_obj = pickle.load(inp)
+                        if type(tmp_obj) is OCTMap:
+                            self.ez_distance_map = tmp_obj
+                            self.elm_distance_map = pickle.load(inp) # load next object from file
+
         elif self.ssd_dir:
             self.ez_distance_map = pickle.load(open(self.ssd_dir["ez"], "r"))
             self.elm_distance_map = pickle.load(open(self.ssd_dir["ez"], "r"))
         
         else:
-            raise ValueError("No directory to load ssd maps is given")
+            raise ValueError("No directory to load ssd maps is given\n Try to create ssd first by method 'create_ssd_maps()'")
         
     
         
@@ -303,7 +391,7 @@ class RelEZIntensity:
             mask_dict = ut.get_mask_list(folder_path)
 
         if area_exclusion == "rpedc":
-            ae_dict = ut.get_list_by_format(folder_path, ".tif")
+            ae_dict = ut.get_rpedc_list(folder_path)
 
         
         # central bscan/ascan, number of stacks (nos)
@@ -311,16 +399,14 @@ class RelEZIntensity:
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
         nos = scan_size[1] // stackwidth # number of stacks
 
-        ez_intensity = np.empty(shape=[0, scan_size[0], nos])
-        elm_intensity = np.empty_like(ez_intensity)
 
-        
         # iterate  over .vol-list
         for vol_id in data_dict[".vol"]:
 
             # current distance map
             curr_ez_intensity = np.zeros((scan_size[0], nos))
             curr_elm_intensity = np.zeros_like(curr_ez_intensity)
+            curr_excluded = np.zeros_like(curr_ez_intensity)
             
             
             # get vol data from file
@@ -338,11 +424,16 @@ class RelEZIntensity:
                 if vol_id in mask_dict.keys():
                     mask_list = mask_dict[vol_id]
                 else:
-                    print("ID: %s considered segmentation mask not exist" % vol_id)
+                    print("ID: %s considered segmentation masks not exist" % vol_id)
+                    continue
 
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+            try:
+                fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+            except:
+                print("ID %s is missing in Fovea List " % vol_id)
+                continue
             
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
@@ -357,25 +448,38 @@ class RelEZIntensity:
             else:
                 fovea_ascan = fovea_ascan -1
 
-            
+
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
+            # get start position to read data
+            d_ascan = c_ascan - fovea_ascan
 
             if not self.elm_distance_map or not self.ez_distance_map:
                 raise ValueError("Site specific distance maps not given")
+                
+                
+            # if area_exception is "rpedc" get list of thickness maps 
+            if area_exclusion == "rpedc":
+                if vol_id in ae_dict.keys():
+                    rpedc_map = ut.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
+                else:
+                    print("ID: %s considered segmentation masks not exist" % vol_id)
+                    continue
+            
 
-
-            for bscan, ez, elm, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx in zip(
+            
+            for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
                 curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 self.ez_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 self.ez_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
                 self.elm_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 self.elm_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])) # read 
+                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])), # read
+                range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
                 ):
-                
 
                 if self.base_layer == None or self.base_layer == "vol":
                     try:
@@ -383,7 +487,7 @@ class RelEZIntensity:
                     except:
                         continue
                 if self.base_layer == "masks":
-                    layer = ut.get_seg_by_mask(mask_list[idx], 10) # the last argument depends on the number of layer classes of the segmentation mask
+                    layer = ut.get_seg_by_mask(mask_list[idx_r], 10) # the last argument depends on the number of layer classes of the segmentation mask
 
                 bscan_data = bscan._scan_raw
                 if lat == "OS":
@@ -391,8 +495,7 @@ class RelEZIntensity:
                     layer = np.flip(layer)
                 
                 
-                # get start position to read data
-                d_ascan = c_ascan - fovea_ascan
+
                 shift = min([d_ascan, 0])
                 start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
                 start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
@@ -408,10 +511,12 @@ class RelEZIntensity:
                         roi[:,i] = bscan_data[l-40:l+10,i]
                         
             
-                # get ez and rpe boundary 
-                imglayers = get_retinal_layers(roi) 
-                
-                plot_layers(roi, imglayers)                
+# =============================================================================
+#                 # get ez and rpe boundary 
+#                 imglayers = get_retinal_layers(roi) 
+#                 
+#                 plot_layers(roi, imglayers)                
+# =============================================================================
                 
                 # iterate over bscans
                 for i in range(n_st):
@@ -422,16 +527,23 @@ class RelEZIntensity:
                         
                         # excluding section
                         # excluding condition can be 
-                            # a thickness map of rpedc
-                            # a ez-loss map like in mactel project
-                            # a thickness determine by the distance between bm and rpe based on segmentation layer
+                            
+                        # a thickness map of rpedc
+                        if self.area_exclusion == "rpedc":
+                            if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                                excl[start_w + i] = 1
+                                continue
+                        # a ez-loss map like in mactel project
+                        #...
+                        # a thickness determine by the distance between bm and rpe based on segmentation layer
+                        #...
                             
                         
                         
                         i_profile =  np.zeros((50, 1)).astype(np.float32)[:,0] # intensity profile
-                        for idx, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                        for idxs, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                             if l < 496 and l > 0:
-                                i_profile = i_profile + bscan_data[l-40:l+10,start_r + i * stackwidth + idx]
+                                i_profile = i_profile + bscan_data[l-40:l+10,start_r + i * stackwidth + idxs]
                         i_profile/= self.stackwidth
                         
                         
@@ -444,42 +556,61 @@ class RelEZIntensity:
                                                             ez_ssd_std[start_w + i],
                                                             elm_ssd_mean[start_w + i],
                                                             elm_ssd_std[start_w + i])
-
-                        ez[start_w + i] = ez_peak
-                        elm[start_w + i] = elm_peak
+                        
+                        if ez_peak != 0:
+                            ez[start_w + i] = i_profile[ez_peak]
+                        if elm_peak != 0:
+                            elm[start_w + i] = i_profile[elm_peak]
                         
                         
-                        if ez_peak != 0 and elm_peak !=0:
-                            plt.plot(np.arange(len(i_profile)), i_profile,
-                                     rpe_peak, i_profile[rpe_peak], "x",
-                                     ez_peak, i_profile[ez_peak], "x",
-                                     elm_peak, i_profile[elm_peak], "x")
+# =============================================================================
+#                         if ez_peak != 0 and elm_peak !=0:
+#                             plt.plot(np.arange(len(i_profile)), i_profile,
+#                                      rpe_peak, i_profile[rpe_peak], "x",
+#                                      ez_peak, i_profile[ez_peak], "x",
+#                                      elm_peak, i_profile[elm_peak], "x")
+# =============================================================================
                         
 
-
-
-            curr_ez_intensity
-            curr_elm_intensity
             
-        
+            if area_exclusion == "rpedc":
+                maps_data = {
+                    "ez" : curr_ez_intensity,
+                    "elm": curr_elm_intensity,
+                    "exc": curr_excluded,
+                    }
+            else:
+                maps_data = {
+                    "ez" : curr_ez_intensity,
+                    "elm": curr_elm_intensity
+                    }                
             
-        # set all zeros to nan
-        ez_intensity[ez_intensity == 0] = np.nan
-        elm_intensity[elm_intensity == 0] = np.nan
+            # create Map Objects containing the created maps 
+            current_map = OCTMap(
+                "REZI-Map",
+                vol_data._meta["VisitDate"],
+                self.scan_size,
+                self.stackwidth,
+                lat,
+                maps_data
+            )            
+    
         
-        
-        # create Map Objects containing the created maps 
-        self.ez_distance_map = OCTMap(
-            "Distance Map RPE to EZ",
-            date.today(),
-            self.scan_size,
-            self.stackwidth,
-            None, 
-            {
-            "distance": np.nanmean(ez_intensity, axis=0),
-            "std"      : np.nanstd(ez_intensity, axis=0)
-            }
-            )
+            if vol_id in self.patients.keys():
+                
+                # not yet tested
+                for i, visit in enumerate(self.patients[vol_id].visits):
+                    if visit.date_of_origin < current_map.date_of_origin:
+                        continue
+                    if visit.date_of_origin > current_map.date_of_origin:
+                        self.patients[vol_id].visits.insert(current_map, i)
+                        break
+            else:
+                self.patients[vol_id] = Patient(
+                                            vol_id,
+                                            vol_data._meta["DOB"],
+                                            [current_map])
+                        
 
     
 
@@ -670,12 +801,10 @@ class RelEZIntensity:
                             elm_peak = None
                             
                             
-# =============================================================================
-#                         plt.plot(np.arange(len(i_profile)), i_profile,
-#                                      rpe_peak, i_profile[rpe_peak], "x",
-#                                      ez_peak, i_profile[ez_peak], "x",
-#                                      elm_peak, i_profile[elm_peak], "x")
-# =============================================================================
+                        plt.plot(np.arange(len(i_profile)), i_profile,
+                                     rpe_peak, i_profile[rpe_peak], "x",
+                                     ez_peak, i_profile[ez_peak], "x",
+                                     elm_peak, i_profile[elm_peak], "x")
                         
                         # set distances
                         if rpe_peak:
@@ -725,15 +854,171 @@ class RelEZIntensity:
             )
             
         
+    def create_mean_rpedc_map(
+            self,
+            folder_path: Union[str, Path, IO] = None,
+            fovea_coords: Optional[Dict] = None,
+            scan_size: Optional[tuple] = None
+            ):
+        """
+        Args:
+            folder_path (Union[str, Path, IO]): folder path where files are storedB
+            fovea_coords (Optional[Dict]): location of fovea
+                !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
+                bscan (int): Number of B-scan including fovea
+                ascan (int): Number of A-scan including fovea
+            scan_size (Optional[tuple]): scan field size in x and y direction
+                x (int): Number of B-scans
+                y (int): Number of A-scans
+            stackwidth (Optional[int]): number of columns for a single profile
+            ref_layer (Optional[str]): layer to flatten the image 
+            base_layer (Optional[str]): pre segmented layer 
+                "masks": if segmentation mask is used
+                "vol": if segmentation by .vol-file is used
+            *args: file formats that contain the data
+        """
+        
+        if not scan_size:
+            scan_size = self.scan_size
+        else:
+            self.scan_size = scan_size
+            
+            
+        # central bscan/ascan, number of stacks (nos)
+        c_bscan = scan_size[0] // 2 + scan_size[0] % 2
+        c_ascan = scan_size[1] // 2 + scan_size[1] % 2
+            
+        # get all rpedc maps
+        rpedc_dict = ut.get_rpedc_list(folder_path)
+        
+        # get vol_data to determin laterality
+        data_dict = ut.get_vol_list(folder_path)
+        
+        
+        rpedc_thickness = np.empty(shape=[0, 640, scan_size[1]])
+        
+        for ids in rpedc_dict.keys():
+            if ids in fovea_coords.keys():
 
+                # load map
+                maps = cv2.imread(rpedc_dict[ids], flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)).astype(float)
+                                
+                
+                
+                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+                fovea_bscan, fovea_ascan = fovea_coords[ids]
+                    
+                # change orientation from top down, subtract on from coords to keep 0-indexing of python            
+                fovea_bscan = scan_size[0] - (fovea_bscan -1) 
 
+                # laterality 
+                vol_data = ep.Oct.from_heyex_vol(data_dict[ids])
+                lat = vol_data._meta["ScanPosition"]
+
+                if lat == "OS": # if left eye is processed
+                    fovea_ascan = scan_size[1] - (fovea_ascan -1)
+                    maps = np.flip(maps, 1)
+                else:
+                    fovea_ascan = fovea_ascan -1
+
+                d_bscan  = c_bscan - fovea_bscan
+                d_ascan = c_ascan - fovea_ascan
+                
+
+                rpedc_thickness = np.append(rpedc_thickness, shift(maps, (int(640./241.)*d_bscan, d_ascan))[None, ...], axis=0) # add dimension to append stack
+        
+                
+        rpedc_thickness[rpedc_thickness <= 0.1] = np.nan # invalid values are set to nan
+        
+        self.mean_rpedc_map = OCTMap(
+            "mean_rpedc",
+            date.today(),
+            self.scan_size,
+            self.stackwidth,
+            None, 
+            {
+            "mean" : np.nanmean(rpedc_thickness, axis=0),
+            "std"      : np.nanstd(rpedc_thickness, axis=0)
+            }
+            )
+
+    def create_excel_sheets(
+            self, 
+            folder_path,
+            n,
+            scan_field,
+            project,
+            ):
+        
+        """
+        Args:
+            folder_path (str): Target folder for data
+            n (int): Number of visits per sheet
+            scan_field (int, int): Scan field in degree
+            project (str): project name like Macustar
+            
+        """
+        nos = self.scan_size[1] // self.stackwidth
+        d_a_scan = scan_field[1] / nos
+        d_b_scan = scan_field[0] / self.scan_size[0]
+        a_scan_mesh, b_scan_mesh = np.meshgrid(
+                    np.arange(-scan_field[1]/2, scan_field[1]/2,d_a_scan),
+                    np.arange(-scan_field[0]/2, scan_field[0]/2,d_b_scan))
+        a_scan_mesh = a_scan_mesh.flatten()
+        b_scan_mesh = b_scan_mesh.flatten()
+        
+        b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten()
+    
+        
+        header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
+
+        if os.path.isdir(folder_path):
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            worksheet = workbook.add_worksheet()
+            worksheet.write_row(0, 0, header)
+            
+        else:
+            os.path.mkdir(folder_path)
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            worksheet = workbook.add_worksheet()            
+            worksheet.write_row(0, 0, header)
+            
+        row = 1
+        
+        for i, ids in enumerate(self.patients.keys()):
+            
+            for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                
+                   worksheet.write(row, j * len(header), ids)
+                   worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                   worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                   worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                   worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                   worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                   worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                   worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                   worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+                   
+            row += nos * self.scan_size[0]
+            
+            if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
+                workbook.close()
+                workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
+                worksheet = workbook.add_worksheet()            
+                worksheet.write_row(0, 0, header)   
+                row = 1
+                
+        workbook.close()        
+                
+            
+            
 
 if __name__ == '__main__':
     
     fovea_coords = {
-        #"001-0044": (121,380),
-        #"001-0046": (125,379),
-        #"001-0049": (123, 372),
+        "001-0044": (121,380),
+        "001-0046": (125,379),
+        "001-0049": (123, 372),
         "001-0059": (112, 359)
     }
 # =============================================================================
@@ -749,15 +1034,26 @@ if __name__ == '__main__':
     path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
     path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
     data = RelEZIntensity()
+    ut.change_vol_filename(path_c)
     #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
+    #data.create_mean_rpedc_map(path_c, fovea_coords, (241, 768))
 
     path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
-    #data.save_ssd(path_ssd)
-    data.load_ssd(path_ssd)
+    #data.save_mean_rpedc_map(path_ssd)
+    data.load_mean_rpedc_map(path_ssd)
     
-    data.get_data(path_i, fovea_coords, (241, 768), 9, None, "masks", ".vol")
+
+    data.load_ssd(path_ssd,"ssd_2022-05-26.pkl")
+    data.get_data(path_i, fovea_coords, (241, 768), 9, None, "masks", "rpedc", ".vol")
     
-    plt.imshow(data.ez_distance_map.octmap["distance"])
+    data.create_excel_sheets( 
+            path_ssd,
+            2,
+            (25, 30),
+            "Macustar",
+            )
+    
+    #plt.imshow(data.mean_rpedc_map.octmap["std"])
     #plt.imshow(data.elm_distance_map.octmap["distance"])
     
 
