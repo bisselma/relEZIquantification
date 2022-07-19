@@ -6,12 +6,12 @@ import os
 import cv2 
 import numpy as np
 from torch import full
-import matplotlib.pyplot as plt
-import rel_ez_intensity  
+import matplotlib.pyplot as plt 
 from scipy.ndimage import shift
 from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
 
+import rel_ez_intensity.base
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,
