@@ -6,7 +6,7 @@ from unicodedata import name
 from weakref import ref
 import numpy as np
 import sys
-import utils as ut
+import rel_ez_intensity.utils as ut
 import eyepy as ep
 import matplotlib.pyplot as plt
 from PIL import Image
