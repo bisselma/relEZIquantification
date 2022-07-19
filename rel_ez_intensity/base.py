@@ -6,12 +6,8 @@ from unicodedata import name
 from weakref import ref
 import numpy as np
 import sys
-import rel_ez_intensity.utils as ut
-import eyepy as ep
 import matplotlib.pyplot as plt
 from PIL import Image
-from getAdjacencyMatrix import plot_layers
-from seg_core import get_retinal_layers
 from scipy.stats import moment
 from scipy.signal import find_peaks
 from scipy.ndimage import shift
@@ -20,6 +16,12 @@ import pickle
 import os
 import cv2
 import xlsxwriter as xls
+
+import eyepy as ep
+
+from rel_ez_intensity.getAdjacencyMatrix import plot_layers
+from rel_ez_intensity.seg_core import get_retinal_layers
+from  rel_ez_intensity import utils as ut
 
 
 class OCTMap:
