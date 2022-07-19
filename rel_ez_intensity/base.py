@@ -21,7 +21,7 @@ import eyepy as ep
 
 from rel_ez_intensity.tools.getAdjacencyMatrix import plot_layers
 from rel_ez_intensity.tools.seg_core import get_retinal_layers
-from  rel_ez_intensity import utils as ut
+from rel_ez_intensity.tools import utils as ut
 
 
 class OCTMap:
