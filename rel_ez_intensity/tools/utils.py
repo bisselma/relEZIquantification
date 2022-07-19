@@ -12,7 +12,7 @@ from scipy.ndimage import shift
 from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
 
-import rel_ez_intensity.base.OCTMaps as OCTMap
+from rel_ez_intensity.base import OCTMap
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,
