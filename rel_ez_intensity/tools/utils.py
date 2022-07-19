@@ -11,7 +11,8 @@ from scipy.ndimage import shift
 from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
 
-import rel_ez_intensity.base as b
+import rel_ez_intensity.base
+
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,
@@ -63,7 +64,7 @@ def get_rpedc_list(
 def get_rpedc_map(
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[b.OCTMap] = None,
+    mean_rpedc: Optional[np.ndarray] = None,#: Optional[OCTMap] = None,
     laterality: Optional[str] = None,
     translation: Optional[tuple] = None
     ) -> np.ndarray:
