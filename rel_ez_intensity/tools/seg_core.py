@@ -1,10 +1,10 @@
 import cv2
 import json
 import numpy as np
-from seg_utils import get_flatten_seg
-import utils as sh
-from getAdjacencyMatrix import get_adjacency_matrix, plot_layers
-from getAdjacencyMatrix import get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind, \
+from rel_ez_intensity.tools.seg_utils import get_flatten_seg
+import rel_ez_intensity.tools.utils as sh
+from rel_ez_intensity.tools.getAdjacencyMatrix import get_adjacency_matrix, plot_layers
+from rel_ez_intensity.tools.getAdjacencyMatrix import get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind, \
     ind2sub
 import matplotlib.pyplot as plt
 
