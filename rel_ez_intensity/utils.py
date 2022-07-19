@@ -114,7 +114,7 @@ def get_list_by_format(
                     if os.path.isdir(full_path):
                         dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
                     if os.path.isfile(full_path) and full_path.endswith(tmp_format):
-                        tmp_dict[full_path.split("\\")[-2].split("_")[1][4:]] = full_path                     
+                        tmp_dict[full_path.split("\\")[-2].split("_")[1][4:]] = full_path                      
                 return_list[tmp_format] = tmp_dict
             else:
                 dir_list = os.listdir(folder_path)

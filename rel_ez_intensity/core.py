@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Optional, Union, IO
 from unicodedata import name
 from weakref import ref
 import numpy as np
+import sys
 import utils as ut
 import eyepy as ep
 import matplotlib.pyplot as plt
@@ -1016,10 +1017,7 @@ class RelEZIntensity:
 if __name__ == '__main__':
     
     fovea_coords = {
-        "001-0044": (121,380),
-        "001-0046": (125,379),
-        "001-0049": (123, 372),
-        "001-0059": (112, 359)
+        "DR101": (121,380),
     }
 # =============================================================================
 #     fovea_coords = {
@@ -1034,17 +1032,18 @@ if __name__ == '__main__':
     path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
     path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
     data = RelEZIntensity()
-    ut.change_vol_filename(path_c)
+    #ut.change_vol_filename(path_c)
     #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
     #data.create_mean_rpedc_map(path_c, fovea_coords, (241, 768))
 
     path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
     #data.save_mean_rpedc_map(path_ssd)
-    data.load_mean_rpedc_map(path_ssd)
+    #data.load_mean_rpedc_map(path_ssd)
     
 
     data.load_ssd(path_ssd,"ssd_2022-05-26.pkl")
-    data.get_data(path_i, fovea_coords, (241, 768), 9, None, "masks", "rpedc", ".vol")
+    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
+    data.get_data(path, fovea_coords, (241, 768), 9, None, None, None, ".vol")
     
     data.create_excel_sheets( 
             path_ssd,
