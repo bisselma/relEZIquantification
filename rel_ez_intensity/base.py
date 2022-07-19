@@ -19,8 +19,8 @@ import xlsxwriter as xls
 
 import eyepy as ep
 
-from rel_ez_intensity.getAdjacencyMatrix import plot_layers
-from rel_ez_intensity.seg_core import get_retinal_layers
+from rel_ez_intensity.tools.getAdjacencyMatrix import plot_layers
+from rel_ez_intensity.tools.seg_core import get_retinal_layers
 from  rel_ez_intensity import utils as ut
 
 
