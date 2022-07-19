@@ -62,7 +62,7 @@ def get_rpedc_list(
 def get_rpedc_map(
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[rel_ez_intensity.core.CTMap] = None,
+    mean_rpedc: Optional[rel_ez_intensity.core.OCTMap] = None,
     laterality: Optional[str] = None,
     translation: Optional[tuple] = None
     ) -> np.ndarray:
