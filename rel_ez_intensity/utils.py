@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 from torch import full
 import matplotlib.pyplot as plt
-from rel_ez_intensity.core import OCTMap
+import rel_ez_intensity
 from scipy.ndimage import shift
 from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
@@ -62,7 +62,7 @@ def get_rpedc_list(
 def get_rpedc_map(
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[OCTMap] = None,
+    mean_rpedc: Optional[rel_ez_intensity.core.CTMap] = None,
     laterality: Optional[str] = None,
     translation: Optional[tuple] = None
     ) -> np.ndarray:
