@@ -211,6 +211,7 @@ class RelEZIntensity:
             return 38
     
     def get_rpedc_map(
+        self,
         file_path: Union[str, Path, IO] = None,
         scan_size: Optional[tuple] = None,
         mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
