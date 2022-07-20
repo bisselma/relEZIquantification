@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*- 
+from datetime import date
 from importlib.machinery import PathFinder
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union, IO
@@ -11,7 +12,25 @@ from scipy.ndimage import shift
 from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
 
-import rel_ez_intensity.base
+
+
+class OCTMap:
+
+    def __init__(
+            self,
+            name: str,
+            date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
+            scan_size: Optional[tuple] = None,
+            stackwidth: Optional[int] = None,
+            laterality: Optional[str] = None,
+            octmap: Optional[Dict] = None,
+            ) -> None:
+        self.name = name
+        self.date_of_origin = date_of_origin
+        self.scan_size = scan_size
+        self.stackwidth = stackwidth
+        self.laterality = laterality
+        self.octmap = octmap
 
 
 def get_id_by_file_path(
@@ -64,7 +83,7 @@ def get_rpedc_list(
 def get_rpedc_map(
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[np.ndarray] = None,#: Optional[OCTMap] = None,
+    mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
     laterality: Optional[str] = None,
     translation: Optional[tuple] = None
     ) -> np.ndarray:

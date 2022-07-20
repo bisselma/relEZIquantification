@@ -19,28 +19,15 @@ import xlsxwriter as xls
 
 import eyepy as ep
 
-from rel_ez_intensity.tools.getAdjacencyMatrix import plot_layers
-from rel_ez_intensity.tools.seg_core import get_retinal_layers
-import rel_ez_intensity.tools.utils as ut
+
+from rel_ez_intensity.getAdjacencyMatrix import plot_layers
+from rel_ez_intensity.seg_core import get_retinal_layers
+from rel_ez_intensity.utils import OCTMap
+from rel_ez_intensity import utils as ut
 
 
-class OCTMap:
 
-    def __init__(
-            self,
-            name: str,
-            date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
-            scan_size: Optional[tuple] = None,
-            stackwidth: Optional[int] = None,
-            laterality: Optional[str] = None,
-            octmap: Optional[Dict] = None,
-            ) -> None:
-        self.name = name
-        self.date_of_origin = date_of_origin
-        self.scan_size = scan_size
-        self.stackwidth = stackwidth
-        self.laterality = laterality
-        self.octmap = octmap
+
     
 
 class Patient:
@@ -1031,28 +1018,36 @@ if __name__ == '__main__':
 #     }
 # =============================================================================
     
-    path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
-    path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
+    #path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
+    #path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
+    
+    
+    # path
+    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
     data = RelEZIntensity()
     #ut.change_vol_filename(path_c)
     #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
     #data.create_mean_rpedc_map(path_c, fovea_coords, (241, 768))
+    
+    data.load_ssd(path)
 
-    path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
+    #path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
     #data.save_mean_rpedc_map(path_ssd)
     #data.load_mean_rpedc_map(path_ssd)
     
 
-    data.load_ssd(path_ssd,"ssd_2022-05-26.pkl")
-    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
-    data.get_data(path, fovea_coords, (241, 768), 9, None, None, None, ".vol")
-    
-    data.create_excel_sheets( 
-            path_ssd,
-            2,
-            (25, 30),
-            "Macustar",
-            )
+# =============================================================================
+#     data.load_ssd(path_ssd,"ssd_2022-05-26.pkl")
+#     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
+#     data.get_data(path, fovea_coords, (241, 768), 9, None, None, None, ".vol")
+#     
+#     data.create_excel_sheets( 
+#             path_ssd,
+#             2,
+#             (25, 30),
+#             "Macustar",
+#             )
+# =============================================================================
     
     #plt.imshow(data.mean_rpedc_map.octmap["std"])
     #plt.imshow(data.elm_distance_map.octmap["distance"])
