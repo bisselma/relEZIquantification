@@ -212,11 +212,19 @@ class RelEZIntensity:
     
     def get_rpedc_map(
         self,
-        file_path: Union[str, Path, IO] = None,
-        scan_size: Optional[tuple] = None,
-        mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
-        laterality: Optional[str] = None,
-        translation: Optional[tuple] = None
+        file_path,
+        scan_size,
+        mean_rpedc,#: Optional[OCTMap] = None,
+        laterality,
+        translation
+
+
+#        self,
+#        file_path: Union[str, Path, IO] = None,
+#        scan_size: Optional[tuple] = None,
+#        mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
+#        laterality: Optional[str] = None,
+#        translation: Optional[tuple] = None
         ) -> np.ndarray:
 
         maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
