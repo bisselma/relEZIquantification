@@ -16,6 +16,7 @@ import pickle
 import os
 import cv2
 import xlsxwriter as xls
+from scipy.ndimage.morphology import binary_dilation
 
 import eyepy as ep
 
@@ -23,10 +24,25 @@ import eyepy as ep
 from rel_ez_intensity.getAdjacencyMatrix import plot_layers
 from rel_ez_intensity.seg_core import get_retinal_layers
 from rel_ez_intensity import utils as ut
-from rel_ez_intensity.utils import OCTMap
 
 
+class OCTMap:
 
+    def __init__(
+            self,
+            name: str,
+            date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
+            scan_size: Optional[tuple] = None,
+            stackwidth: Optional[int] = None,
+            laterality: Optional[str] = None,
+            octmap: Optional[Dict] = None,
+            ) -> None:
+        self.name = name
+        self.date_of_origin = date_of_origin
+        self.scan_size = scan_size
+        self.stackwidth = stackwidth
+        self.laterality = laterality
+        self.octmap = octmap
 
     
 
@@ -194,7 +210,37 @@ class RelEZIntensity:
         else:
             return 38
     
+    def get_rpedc_map(
+        file_path: Union[str, Path, IO] = None,
+        scan_size: Optional[tuple] = None,
+        mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
+        laterality: Optional[str] = None,
+        translation: Optional[tuple] = None
+        ) -> np.ndarray:
+
+        maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
     
+    
+        if laterality == "OS":
+            maps = np.flip(maps, 1)
+        
+        maps_shifted = shift(maps, translation)
+        # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
+        sub = maps_shifted - (mean_rpedc.octmap["mean"] + (4. * mean_rpedc.octmap["std"])) 
+
+
+        sub = np.logical_or(sub > 0., maps_shifted <= 0.01)
+        sub_resized = cv2.resize(sub.astype(np.uint8), scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
+
+    
+        # structure element should have a radius of 100 um (Macustar-format (
+        # ~30 um per bscan => ~ 3 px in y-direction and 2 * 3 px to get size of rectangle in y-dir. 
+        # ~ 10 um per ascan => ~ 10 px in x-direction and 2 * 10 px to get size of rectangle in x-dir. 
+        struct = np.ones((4, 10), dtype=bool)
+        sub_dilation = binary_dilation(sub_resized, structure = struct)   
+    
+
+        return sub_dilation.astype(bool)     
     
     def save_mean_rpedc_map(            
             self,
@@ -451,7 +497,7 @@ class RelEZIntensity:
             # if area_exception is "rpedc" get list of thickness maps 
             if area_exclusion == "rpedc":
                 if vol_id in ae_dict.keys():
-                    rpedc_map = ut.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
+                    rpedc_map = self.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
                     print("ID: %s considered segmentation masks not exist" % vol_id)
                     continue
