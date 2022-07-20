@@ -334,6 +334,7 @@ class RelEZIntensity:
             obj_list = ut.get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
                 if filename in file:
+                    from rel_ez_intensity.base import OCTMap
                     with open(file, 'rb') as inp:
                         tmp_obj = pickle.load(inp)
                         if type(tmp_obj) is OCTMap:
