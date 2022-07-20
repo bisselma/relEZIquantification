@@ -5,7 +5,7 @@ import numpy as np
 import skimage.io as io
 from scipy.signal import savgol_filter
 from typing import Callable, Dict, List, Optional, Union, IO
-from seg_core import Layer
+from rel_ez_intensity.seg_core import Layer
 
 
 # flattened, unshiftList = flatten(img)
