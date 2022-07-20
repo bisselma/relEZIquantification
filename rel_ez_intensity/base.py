@@ -335,7 +335,6 @@ class RelEZIntensity:
             obj_list = ut.get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
                 if filename in file:
-                    from rel_ez_intensity.base import OCTMap
                     with open(file, 'rb') as inp:
                         tmp_obj = pickle.load(inp)
                         if type(tmp_obj) is OCTMap:
@@ -1055,8 +1054,7 @@ class RelEZIntensity:
 if __name__ == '__main__':
     
     fovea_coords = {
-        "DR101": (121,380),
-    }
+        "001-0001": (121,380)}
 # =============================================================================
 #     fovea_coords = {
 #             "001-0006": (121,384),
@@ -1077,9 +1075,11 @@ if __name__ == '__main__':
     #ut.change_vol_filename(path_c)
     #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
     #data.create_mean_rpedc_map(path_c, fovea_coords, (241, 768))
-    
+    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
     data.load_ssd(path)
-
+    data.load_mean_rpedc_map(path)
+    path_data = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\Projekt Sarah\\Macustar\\V1\\testdaten\\MACUSTAR_313-001-0001_R_2018-3-26"
+    data.get_data(path_data, fovea_coords, (241, 768), 9, None, "masks", "rpedc", ".vol")
     #path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
     #data.save_mean_rpedc_map(path_ssd)
     #data.load_mean_rpedc_map(path_ssd)
