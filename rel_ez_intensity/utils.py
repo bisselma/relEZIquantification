@@ -9,28 +9,11 @@ import numpy as np
 from torch import full
 import matplotlib.pyplot as plt 
 from scipy.ndimage import shift
-from scipy.ndimage.morphology import binary_dilation
 import eyepy as ep
 
 
 
-class OCTMap:
 
-    def __init__(
-            self,
-            name: str,
-            date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
-            scan_size: Optional[tuple] = None,
-            stackwidth: Optional[int] = None,
-            laterality: Optional[str] = None,
-            octmap: Optional[Dict] = None,
-            ) -> None:
-        self.name = name
-        self.date_of_origin = date_of_origin
-        self.scan_size = scan_size
-        self.stackwidth = stackwidth
-        self.laterality = laterality
-        self.octmap = octmap
 
 
 def get_id_by_file_path(
@@ -80,37 +63,6 @@ def get_rpedc_list(
             return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
     return return_list
 
-def get_rpedc_map(
-    file_path: Union[str, Path, IO] = None,
-    scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[OCTMap] = None,#: Optional[OCTMap] = None,
-    laterality: Optional[str] = None,
-    translation: Optional[tuple] = None
-    ) -> np.ndarray:
-
-    maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
-    
-    
-    if laterality == "OS":
-        maps = np.flip(maps, 1)
-        
-    maps_shifted = shift(maps, translation)
-    # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
-    sub = maps_shifted - (mean_rpedc.octmap["mean"] + (4. * mean_rpedc.octmap["std"])) 
-
-
-    sub = np.logical_or(sub > 0., maps_shifted <= 0.01)
-    sub_resized = cv2.resize(sub.astype(np.uint8), scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
-
-    
-    # structure element should have a radius of 100 um (Macustar-format (
-    # ~30 um per bscan => ~ 3 px in y-direction and 2 * 3 px to get size of rectangle in y-dir. 
-    # ~ 10 um per ascan => ~ 10 px in x-direction and 2 * 10 px to get size of rectangle in x-dir. 
-    struct = np.ones((4, 10), dtype=bool)
-    sub_dilation = binary_dilation(sub_resized, structure = struct)   
-    
-
-    return sub_dilation.astype(bool) 
 
 # get all data in origin folder by format 
 def get_list_by_format(
