@@ -5,7 +5,7 @@ import numpy as np
 import skimage.io as io
 from scipy.signal import savgol_filter
 from typing import Callable, Dict, List, Optional, Union, IO
-
+import json
 
 # path class
 class Layer(object):
