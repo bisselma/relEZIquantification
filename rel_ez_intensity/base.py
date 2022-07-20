@@ -1099,7 +1099,8 @@ if __name__ == '__main__':
 # =============================================================================
     
     #plt.imshow(data.mean_rpedc_map.octmap["std"])
-    #plt.imshow(data.elm_distance_map.octmap["distance"])
+    for pat in data.patients:
+        plt.imshow(data.patients[pat].visits[0].octmap["ez"])
     
 
 
