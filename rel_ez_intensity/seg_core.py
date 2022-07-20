@@ -3,7 +3,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-from seg_utils import get_flatten_seg
+from rel_ez_intensity.seg_utils import get_flatten_seg
 import utils as sh
 from getAdjacencyMatrix import get_adjacency_matrix, plot_layers
 from getAdjacencyMatrix import (get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind,
