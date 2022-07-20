@@ -3,7 +3,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-from rel_ez_intensity.seg_utils import get_flatten_seg
+from rel_ez_intensity.seg_utils import Layer, get_flatten_seg
 import rel_ez_intensity.utils as sh
 from rel_ez_intensity.getAdjacencyMatrix import get_adjacency_matrix, plot_layers
 from rel_ez_intensity.getAdjacencyMatrix import (get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind,
@@ -11,46 +11,6 @@ from rel_ez_intensity.getAdjacencyMatrix import (get_adjacency_matrix, sparse_ma
 
 
 
-# path class
-class Layer(object):
-
-    def __init__(self, name, layer, layerY, layerX):
-        self.name = name
-        self.layer = layer
-        self.layerY = layerY
-        self.layerX = layerX
-        self.layerYmean = np.mean(self.layerY)
-
-    def getName(self):
-        return self.name
-
-    def setName(self, name):
-        self.name = name
-
-    def getLayer(self):
-        return self.layer
-
-    def setLayer(self, layer):
-        self.layer = layer
-        self.layerXmean = np.mean(self.layer)
-
-    def getLayerY(self):
-        return self.layerY
-
-    def setLayerY(self, layerY):
-        self.layerY = layerY
-
-    def getLayerX(self):
-        return self.layerX
-
-    def setLayerX(self, layerX):
-        self.layerX = layerX
-
-    def getLayerYmean(self):
-        return self.layerYmean
-
-    def JSON(self):
-        return "{\"name\": \"" + self.name + "\"," + "\"layer_x\": " + json.dumps((self.layerX.tolist())) + "," + "\"path_y\": " + json.dumps((self.layerY.tolist())) + "}"
 
 # This Object contains all the neccessary parameters of the segmentation 
 class Params(object):

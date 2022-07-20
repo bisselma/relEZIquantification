@@ -5,8 +5,48 @@ import numpy as np
 import skimage.io as io
 from scipy.signal import savgol_filter
 from typing import Callable, Dict, List, Optional, Union, IO
-from rel_ez_intensity.seg_core import Layer
 
+
+# path class
+class Layer(object):
+
+    def __init__(self, name, layer, layerY, layerX):
+        self.name = name
+        self.layer = layer
+        self.layerY = layerY
+        self.layerX = layerX
+        self.layerYmean = np.mean(self.layerY)
+
+    def getName(self):
+        return self.name
+
+    def setName(self, name):
+        self.name = name
+
+    def getLayer(self):
+        return self.layer
+
+    def setLayer(self, layer):
+        self.layer = layer
+        self.layerXmean = np.mean(self.layer)
+
+    def getLayerY(self):
+        return self.layerY
+
+    def setLayerY(self, layerY):
+        self.layerY = layerY
+
+    def getLayerX(self):
+        return self.layerX
+
+    def setLayerX(self, layerX):
+        self.layerX = layerX
+
+    def getLayerYmean(self):
+        return self.layerYmean
+
+    def JSON(self):
+        return "{\"name\": \"" + self.name + "\"," + "\"layer_x\": " + json.dumps((self.layerX.tolist())) + "," + "\"path_y\": " + json.dumps((self.layerY.tolist())) + "}"
 
 # flattened, unshiftList = flatten(img)
 # unflattened = shiftColumn(flattened, unshiftList)
