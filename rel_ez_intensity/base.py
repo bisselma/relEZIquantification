@@ -498,7 +498,7 @@ class RelEZIntensity:
             # if area_exception is "rpedc" get list of thickness maps 
             if area_exclusion == "rpedc":
                 if vol_id in ae_dict.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
+                    rpedc_map = self.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, tuple(int(640./241.)*d_bscan, d_ascan))
                 else:
                     print("ID: %s considered segmentation masks not exist" % vol_id)
                     continue
