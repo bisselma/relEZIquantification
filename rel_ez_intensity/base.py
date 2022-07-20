@@ -838,14 +838,15 @@ class RelEZIntensity:
                             elm_peak = None
                             
                             
-                        plt.plot(np.arange(len(i_profile)), i_profile,
-                                     rpe_peak, i_profile[rpe_peak], "x",
-                                     ez_peak, i_profile[ez_peak], "x",
-                                     elm_peak, i_profile[elm_peak], "x")
+                        #plt.plot(np.arange(len(i_profile)), i_profile,
+                        #             rpe_peak, i_profile[rpe_peak], "x",
+                        #             ez_peak, i_profile[ez_peak], "x",
+                        #             elm_peak, i_profile[elm_peak], "x")
                         
                         # set distances
                         if rpe_peak:
-                            ez[start_w + i] = rpe_peak - ez_peak
+                            if ez_peak:
+                                ez[start_w + i] = rpe_peak - ez_peak
                             if elm_peak:
                                 elm[start_w + i] = rpe_peak - elm_peak
 
