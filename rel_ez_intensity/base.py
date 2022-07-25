@@ -965,7 +965,7 @@ class RelEZIntensity:
 
                 rpedc_thickness = np.append(rpedc_thickness, shift(maps, (int(640./241.)*d_bscan, d_ascan))[None, ...], axis=0) # add dimension to append stack
         
-                
+     
         rpedc_thickness[rpedc_thickness <= 0.1] = np.nan # invalid values are set to nan
         
         self.mean_rpedc_map = OCTMap(
