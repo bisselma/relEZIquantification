@@ -174,6 +174,51 @@ def get_seg_by_mask(mask_path, n):
     return layer[0,:]
 
 
+def getTransformationMartix(img1, img2):
+    # Create our SIFT detector and detect keypoints and descriptors
+    sift = cv2.SIFT_create()
+    # find the keypoints and descriptors with SIFT
+    kp1, des1 = sift.detectAndCompute(img1,None)
+    kp2, des2 = sift.detectAndCompute(img2,None)
+
+    # FLANN parameters
+    FLANN_INDEX_KDTREE = 1
+    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 6)
+    search_params = dict(checks=1000)   # or pass empty dictionary
+    flann = cv2.FlannBasedMatcher(index_params,search_params)
+    matches = flann.knnMatch(des1,des2,k=2)
+    
+    # Need to draw only good matches, so create a mask
+    matchesMask = [[0,0] for i in range(len(matches))]
+    # ratio test as per Lowe's paper
+    for i,(m,n) in enumerate(matches):
+        if m.distance < 0.55*n.distance:
+            matchesMask[i]=[1,0]
+            
+    k1_l = []
+    k2_l = []
+    for i, (matchM, match) in enumerate(zip(matchesMask,matches)):
+        if any(matchM):
+            k1_l.append(kp1[matches[i][0].queryIdx].pt)
+            k2_l.append(kp2[matches[i][0].trainIdx].pt)
+
+
+    k1_l = np.float32(k1_l)
+    k2_l = np.float32(k2_l)
+
+    b = k2_l.T.flatten()[:,None]
+
+    M = np.zeros((2*len(k2_l),6))
+    M[0:len(k1_l),:3] = np.append(k1_l,np.ones((len(k1_l),1)),axis=1)
+    M[len(k1_l):,3:6] = np.append(k1_l,np.ones((len(k1_l),1)),axis=1)
+
+
+    # create pseudo inverse matrix 
+    M_piv = np.linalg.pinv(M)
+    a = M_piv@b
+    A_cal = a.reshape(2,3)
+
+    return A_cal
 
 if __name__ == '__main__':
     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar"

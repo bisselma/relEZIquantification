@@ -61,7 +61,6 @@ class Patient:
 
     
 
-
 class RelEZIntensity:
 
     
@@ -83,6 +82,7 @@ class RelEZIntensity:
         !!! mechanism to exclude region by:
             - Condition like Thickness of RPEDC
             - EZ-loss or Thickness Map
+            - RPD 
 
         3.1 Iteration over .vol
             - Shift by fovea coords
@@ -131,14 +131,8 @@ class RelEZIntensity:
         self.mean_rpedc_map = None 
         self.mrpedc_dir = None
         
-    """
-    standard methods
-    #
-    #
-    #
-    #
-    #
-    """
+ 
+ 
 
     def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
         
@@ -242,7 +236,6 @@ class RelEZIntensity:
 
         return sub_dilation.astype(bool)     
     
-
     def save_mean_rpedc_map(            
             self,
             directory: Union[str, Path, IO, None] = None
@@ -320,7 +313,6 @@ class RelEZIntensity:
             
         self.ssd_dir = sdd_file_path
    
-    
     def load_ssd(
             self,
             directory: Union[str, Path, IO, None] = None,
@@ -348,12 +340,7 @@ class RelEZIntensity:
         else:
             raise ValueError("No directory to load ssd maps is given\n Try to create ssd first by method 'create_ssd_maps()'")
         
-    
-        
-    """
-    
-    """
-    def get_data(
+    def calculate_relEZI_map(
         self,
         folder_path: Union[str, Path, IO] = None,
         fovea_coords: Optional[Dict] = None,
@@ -648,8 +635,31 @@ class RelEZIntensity:
                                             vol_data._meta["DOB"],
                                             [current_map])
                         
+    def get_microperimetry_grid_data(self, micro_img, slo_img, use_gpu):
 
-    
+        A = ut.getTransformationMartix(micro_img, slo_img)
+
+        # create grid coords
+        px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
+        ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
+        ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+
+        x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
+        y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
+
+
+        
+        # create slo field with relEZI-Map 
+            # fovea-centered
+            # calculated possible rigid transformation of relEZI-Map based on slo-grid coords
+
+        # calculate new grid positions of iamd-grid
+        
+
+        # return data_points [1....33]
+        pass
+
+
 
     def create_ssd_maps(
         self,
@@ -891,7 +901,6 @@ class RelEZIntensity:
             }
             )
             
-        
     def create_mean_rpedc_map(
             self,
             folder_path: Union[str, Path, IO] = None,
@@ -965,7 +974,7 @@ class RelEZIntensity:
 
                 rpedc_thickness = np.append(rpedc_thickness, shift(maps, (int(640./241.)*d_bscan, d_ascan))[None, ...], axis=0) # add dimension to append stack
         
-     
+      
         rpedc_thickness[rpedc_thickness <= 0.1] = np.nan # invalid values are set to nan
         
         self.mean_rpedc_map = OCTMap(
