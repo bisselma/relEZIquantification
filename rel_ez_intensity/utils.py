@@ -10,6 +10,8 @@ from torch import full
 import matplotlib.pyplot as plt 
 from scipy.ndimage import shift
 import eyepy as ep
+import pandas as pd
+
 
 
 # key (id): (Eccentricity, Angularposition)
@@ -28,6 +30,40 @@ grid_iamd = {
 
     30: (7, 0),   31:  (7, 90),  32:  (7, 180), 33:  (7, 270),
 }
+
+def get_microperimetry(
+        folder_path: Union[str, Path, IO] = None,
+        pid: str = None,
+        mode: str = None):
+
+    
+    # get list with all files
+    folder_list = os.listdir(folder_path) 
+    excl_file = None
+    
+    for folder_dir in folder_list:
+        full_path = os.path.join(folder_path, folder_dir)
+        if os.path.isdir(full_path):
+            folder_list.extend(os.path.join(folder_dir, subfolder) for subfolder in os.listdir(full_path))
+        if os.path.isfile(full_path) and full_path.endswith(".xlsx"):
+            if pid in full_path and full_path.split("-")[-1].split(".")[0] == mode:
+                excl_file = full_path
+                break
+
+
+    if excl_file is None:
+        raise ValueError("ID is not in folder %s" % folder_path)
+        
+     
+    df = pd.read_excel(excl_file)
+    data = df.columns.ravel()
+    return data[
+            np.logical_and(
+                np.arange(0,len(data)) > 25,
+                np.logical_and(
+                    np.arange(0,len(data)) < 25 + 2 * 33,
+                    np.arange(0,len(data)) % 2 == 0)
+                    )]  
 
 
 
@@ -78,6 +114,24 @@ def get_rpedc_list(
             return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
     return return_list
 
+def get_rpd_list(
+    folder_path: Union[str, Path, IO] = None,
+    ) -> Optional[Dict]:
+
+    if not os.path.exists(folder_path):
+        raise NotADirectoryError("directory: " +  folder_path + " not exist")
+
+    return_list = {}
+
+
+    dir_list = os.listdir(folder_path)
+    for dir in dir_list:
+        full_path = os.path.join(folder_path, dir)
+        if os.path.isdir(full_path):
+            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+        if os.path.isfile(full_path) and full_path.endswith(".zip") in full_path:
+            return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
+    return return_list
 
 # get all data in origin folder by format 
 def get_list_by_format(

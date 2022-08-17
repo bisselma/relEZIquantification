@@ -17,6 +17,7 @@ import os
 import cv2
 import xlsxwriter as xls
 from scipy.ndimage.morphology import binary_dilation
+from read_roi import read_roi_zip
 
 import eyepy as ep
 
@@ -162,7 +163,7 @@ class RelEZIntensity:
         # first: no peak was found
         if len(ez_peaks) == 0:
             return 0, 0
-        # second: the estimated valid case where only one peaks was found 
+        # second: the estimated valid case where only a single peaks was found 
         elif len(ez_peaks) == 1:
             ez_peak = ez_peaks[0]
         # third: invalid case if more then one peak was found
@@ -220,7 +221,7 @@ class RelEZIntensity:
         
         maps_shifted = shift(maps, translation)
         # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
-        sub = maps_shifted - (mean_rpedc.octmap["mean"] + (4. * mean_rpedc.octmap["std"])) 
+        sub = maps_shifted - (mean_rpedc.octmap["mean"] + (3. * mean_rpedc.octmap["std"])) 
 
 
         sub = np.logical_or(sub > 0., maps_shifted <= 0.01)
@@ -236,6 +237,47 @@ class RelEZIntensity:
 
         return sub_dilation.astype(bool)     
     
+    def get_rpd_map(
+        self,
+        file_path: Union[str, Path, IO] = None,
+        scan_size: Optional[tuple] = None,
+        laterality: Optional[str] = None,
+        translation: Optional[tuple] = None
+        ) -> np.ndarray:
+
+        roi = read_roi_zip(file_path)
+        roi = list(roi.values())[0]
+        
+        def get_annotated_mask(roi, shape):
+            x = np.array(roi['x'])
+            y = np.array(roi['y'])
+    
+            x -= 1
+            y -= 1
+    
+            mask = np.zeros(shape, dtype = int)
+    
+            cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
+    
+            return mask
+
+        
+        # get mask by annotation
+        SHAPE = (640, 768) # !!!!! Should be dependent on the recording format of oct
+        mask = get_annotated_mask(roi, SHAPE)
+
+        # if left eye the map is flipped
+        if laterality == "OS":
+            mask = np.flip(mask, 1)
+        
+        # shift the fovea in the center
+        mask_shifted = shift(mask, translation)
+
+        # resize to scan conditions
+        mask_resized = cv2.resize(mask_shifted, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
+
+        return mask_resized
+
     def save_mean_rpedc_map(            
             self,
             directory: Union[str, Path, IO, None] = None
@@ -340,7 +382,7 @@ class RelEZIntensity:
         else:
             raise ValueError("No directory to load ssd maps is given\n Try to create ssd first by method 'create_ssd_maps()'")
         
-    def calculate_relEZI_map(
+    def calculate_relEZI_maps(
         self,
         folder_path: Union[str, Path, IO] = None,
         fovea_coords: Optional[Dict] = None,
@@ -348,7 +390,7 @@ class RelEZIntensity:
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         base_layer: Optional[str] = None,
-        area_exclusion: Optional[str] = None,
+        area_exclusion: Optional[Union[List[str],str]] = None,
         *args
     ) -> None:
 
@@ -365,7 +407,7 @@ class RelEZIntensity:
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
             base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
-            area_exclusion (Optional[str]): Method to determine area of exclusion 
+            area_exclusion (Optional[Union[List[str],str]]): Method to determine area of exclusion 
                                             # The methods are project-dependent and can be updated at a later date
             *args: file formats that contain the data
         """
@@ -414,8 +456,17 @@ class RelEZIntensity:
         if base_layer == "masks":
             mask_dict = ut.get_mask_list(folder_path)
 
-        if area_exclusion == "rpedc":
-            ae_dict = ut.get_rpedc_list(folder_path)
+        if len(self.area_exclusion) == 1:
+            if self.area_exclusion == "rpedc":
+                ae_dict_1 = ut.get_rpedc_list(folder_path)
+            if self.area_exclusion == "rpd":
+                ae_dict_2 = ut.get_rpd_list(folder_path)
+        else: 
+            for area_ex in self.area_exclusion:
+                if area_ex == "rpedc":
+                    ae_dict_1 = ut.get_rpedc_list(folder_path)
+                if area_ex == "rpd":
+                    ae_dict_2 = ut.get_rpd_list(folder_path)
 
         
         # central bscan/ascan, number of stacks (nos)
@@ -461,14 +512,14 @@ class RelEZIntensity:
             
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-            fovea_bscan = scan_size[0] - (fovea_bscan -1) 
+            fovea_bscan = scan_size[0] - fovea_bscan
             
     
             # laterality 
             lat = vol_data._meta["ScanPosition"]
 
             if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - (fovea_ascan -1)
+                fovea_ascan = scan_size[1] - fovea_ascan
             else:
                 fovea_ascan = fovea_ascan -1
 
@@ -483,13 +534,19 @@ class RelEZIntensity:
                 
                 
             # if area_exception is "rpedc" get list of thickness maps 
-            if area_exclusion == "rpedc":
-                if vol_id in ae_dict.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
+            if "rpedc" in self.area_exclusion:
+                if vol_id in ae_dict_1.keys():
+                    rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
                     print("ID: %s considered segmentation masks not exist" % vol_id)
                     continue
             
+            # if area_exception is "rpedc" get list of thickness maps 
+            if "rpd" in self.area_exclusion:
+                if vol_id in ae_dict_2.keys():
+                    rpd_map = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
+                else:
+                    rpd_map = np.zeros(self.scan_size).astype(bool)            
 
             
             for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
@@ -557,6 +614,13 @@ class RelEZIntensity:
                             if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 excl[start_w + i] = 1
                                 continue
+                        if self.area_exclusion == "rpd":
+                            if any(rpd_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                                if excl[start_w + i] == 1:
+                                    excl[start_w + i] = 3 # if area contains rpedc and rpd
+                                else:
+                                    excl[start_w + i] = 2
+                                continue
                         # a ez-loss map like in mactel project
                         #...
                         # a thickness determine by the distance between bm and rpe based on segmentation layer
@@ -595,19 +659,17 @@ class RelEZIntensity:
 #                                      elm_peak, i_profile[elm_peak], "x")
 # =============================================================================
                         
-
+            maps_data = {
+                "ez" : curr_ez_intensity,
+                "elm": curr_elm_intensity
+                }
             
-            if area_exclusion == "rpedc":
-                maps_data = {
-                    "ez" : curr_ez_intensity,
-                    "elm": curr_elm_intensity,
-                    "exc": curr_excluded,
-                    }
-            else:
-                maps_data = {
-                    "ez" : curr_ez_intensity,
-                    "elm": curr_elm_intensity
-                    }                
+            if "rpedc" in self.area_exclusion:
+                maps_data["rpedc"] = np.logical_or(curr_excluded == 1, curr_excluded == 3)
+            
+            if "rpd" in self.area_exclusion:
+                maps_data["rpd"] = np.logical_or(curr_excluded == 2, curr_excluded == 3)
+          
             
             # create Map Objects containing the created maps 
             current_map = OCTMap(
@@ -635,7 +697,8 @@ class RelEZIntensity:
                                             vol_data._meta["DOB"],
                                             [current_map])
                         
-    def get_microperimetry_grid_data(self, micro_img, slo_img, use_gpu):
+    def get_microperimetry_grid_data(self, micro_img, slo_img, fovea_coord, use_gpu):
+
 
         A = ut.getTransformationMartix(micro_img, slo_img)
 
@@ -654,6 +717,13 @@ class RelEZIntensity:
             # calculated possible rigid transformation of relEZI-Map based on slo-grid coords
 
         # calculate new grid positions of iamd-grid
+
+
+        
+        
+        # transform fovea coords by rigid transformation matrix R
+        # calculate new delta_y and delta x by 
+
         
 
         # return data_points [1....33]
@@ -760,13 +830,13 @@ class RelEZIntensity:
             fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-            fovea_bscan = scan_size[0] - (fovea_bscan -1) 
+            fovea_bscan = scan_size[0] - fovea_bscan
 
             # laterality 
             lat = vol_data._meta["ScanPosition"]
 
             if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - (fovea_ascan -1)
+                fovea_ascan = scan_size[1] - fovea_ascan
             else:
                 fovea_ascan = fovea_ascan -1
 
