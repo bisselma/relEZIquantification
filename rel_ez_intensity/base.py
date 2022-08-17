@@ -257,7 +257,7 @@ class RelEZIntensity:
     
             mask = np.zeros(shape, dtype = int)
     
-            cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
+            mask = cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
     
             return mask
 
