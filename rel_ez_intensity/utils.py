@@ -129,7 +129,7 @@ def get_rpd_list(
         full_path = os.path.join(folder_path, dir)
         if os.path.isdir(full_path):
             dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".zip") in full_path:
+        if os.path.isfile(full_path) and full_path.endswith(".zip"):
             return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
     return return_list
 
