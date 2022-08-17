@@ -390,7 +390,7 @@ class RelEZIntensity:
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         base_layer: Optional[str] = None,
-        area_exclusion: Optional[Union[List[str],str]] = None,
+        area_exclusion: Optional[Dict] = None,
         *args
     ) -> None:
 
@@ -407,8 +407,8 @@ class RelEZIntensity:
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
             base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
-            area_exclusion (Optional[Union[List[str],str]]): Method to determine area of exclusion 
-                                            # The methods are project-dependent and can be updated at a later date
+            area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
+                                            # if values (boolean) are True the area should not be analysed. But if oly one value is False the area will be analysed
             *args: file formats that contain the data
         """
         
@@ -457,12 +457,12 @@ class RelEZIntensity:
             mask_dict = ut.get_mask_list(folder_path)
 
         if len(self.area_exclusion) == 1:
-            if self.area_exclusion == "rpedc":
+            if "rpedc" in self.area_exclusion.keys():
                 ae_dict_1 = ut.get_rpedc_list(folder_path)
-            if self.area_exclusion == "rpd":
+            if "rpd" in self.area_exclusion.keys():
                 ae_dict_2 = ut.get_rpd_list(folder_path)
         else: 
-            for area_ex in self.area_exclusion:
+            for area_ex in self.area_exclusion.keys():
                 if area_ex == "rpedc":
                     ae_dict_1 = ut.get_rpedc_list(folder_path)
                 if area_ex == "rpd":
@@ -534,7 +534,7 @@ class RelEZIntensity:
                 
                 
             # if area_exception is "rpedc" get list of thickness maps 
-            if "rpedc" in self.area_exclusion:
+            if "rpedc" in self.area_exclusion.keys():
                 if vol_id in ae_dict_1.keys():
                     rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
@@ -542,7 +542,7 @@ class RelEZIntensity:
                     continue
             
             # if area_exception is "rpedc" get list of thickness maps 
-            if "rpd" in self.area_exclusion:
+            if "rpd" in self.area_exclusion.keys():
                 if vol_id in ae_dict_2.keys():
                     rpd_map = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
@@ -610,17 +610,21 @@ class RelEZIntensity:
                         # excluding condition can be 
                             
                         # a thickness map of rpedc
-                        if "rpedc" in self.area_exclusion:
+                        if "rpedc" in self.area_exclusion.keys():
                             if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 excl[start_w + i] = 1
-                                continue
-                        if "rpd" in self.area_exclusion:
+
+
+                        if "rpd" in self.area_exclusion.keys():
                             if any(rpd_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 if excl[start_w + i] == 1:
                                     excl[start_w + i] = 3 # if area contains rpedc and rpd
-                                else:
+                                if excl[start_w + i] == 0:
                                     excl[start_w + i] = 2
-                                continue
+                        
+                        if all(area_exclusion.values()):
+                            continue
+
                         # a ez-loss map like in mactel project
                         #...
                         # a thickness determine by the distance between bm and rpe based on segmentation layer
@@ -664,10 +668,10 @@ class RelEZIntensity:
                 "elm": curr_elm_intensity
                 }
             
-            if "rpedc" in self.area_exclusion:
+            if "rpedc" in self.area_exclusion.keys():
                 maps_data["rpedc"] = np.logical_or(curr_excluded == 1, curr_excluded == 3)
             
-            if "rpd" in self.area_exclusion:
+            if "rpd" in self.area_exclusion.keys():
                 maps_data["rpd"] = np.logical_or(curr_excluded == 2, curr_excluded == 3)
           
             
