@@ -610,11 +610,11 @@ class RelEZIntensity:
                         # excluding condition can be 
                             
                         # a thickness map of rpedc
-                        if self.area_exclusion == "rpedc":
+                        if "rpedc" in self.area_exclusion:
                             if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 excl[start_w + i] = 1
                                 continue
-                        if self.area_exclusion == "rpd":
+                        if "rpd" in self.area_exclusion:
                             if any(rpd_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 if excl[start_w + i] == 1:
                                     excl[start_w + i] = 3 # if area contains rpedc and rpd
