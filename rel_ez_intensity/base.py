@@ -255,11 +255,11 @@ class RelEZIntensity:
             x -= 1
             y -= 1
     
-            mask = np.zeros(shape, dtype = int)
+            mask = np.zeros(shape, dtype = int).astype(np.uint8)
     
             mask = cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
     
-            return mask
+            return mask.astype(bool)
 
         
         # get mask by annotation
