@@ -255,7 +255,7 @@ class RelEZIntensity:
             x -= 1
             y -= 1
     
-            mask = np.zeros(shape, dtype = int).astype(np.uint8)
+            mask = np.zeros(shape, dtype = int)
     
             mask = cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
     
@@ -271,7 +271,7 @@ class RelEZIntensity:
             mask = np.flip(mask, 1)
         
         # shift the fovea in the center
-        mask_shifted = shift(mask, translation)
+        mask_shifted = shift(mask, translation).astype(np.uint8)
 
         # resize to scan conditions
         mask_resized = cv2.resize(mask_shifted, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
