@@ -613,6 +613,8 @@ class RelEZIntensity:
                         if "rpedc" in self.area_exclusion.keys():
                             if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
                                 excl[start_w + i] = 1
+                                if self.area_exclusion["rpedc"]:
+                                    continue
 
 
                         if "rpd" in self.area_exclusion.keys():
@@ -621,9 +623,8 @@ class RelEZIntensity:
                                     excl[start_w + i] = 3 # if area contains rpedc and rpd
                                 if excl[start_w + i] == 0:
                                     excl[start_w + i] = 2
-                        
-                        if all(area_exclusion.values()):
-                            continue
+                                    if self.area_exclusion["rpd"]:
+                                        continue                    
 
                         # a ez-loss map like in mactel project
                         #...
