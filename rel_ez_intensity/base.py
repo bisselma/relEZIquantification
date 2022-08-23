@@ -644,8 +644,11 @@ class RelEZIntensity:
                                 if self.area_exclusion["rpd"]:
                                         continue    
                             else:
-                                if  excl[start_w + i] >= 1 and self.area_exclusion["rpedc"]:
+                                if  excl[start_w + i] > 1 and self.area_exclusion["rpedc"]:
                                     continue
+                        
+                        if excl[start_w + i] == 1: # atrophy condition
+                            continue
 
 
                         # a ez-loss map like in mactel project
