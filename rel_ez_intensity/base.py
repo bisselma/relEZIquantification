@@ -696,7 +696,7 @@ class RelEZIntensity:
             
             if "rpedc" in self.area_exclusion.keys():
                 maps_data["rpedc"] = np.logical_or(curr_excluded == 2, curr_excluded == 4)
-                maps_data["atrophy"] = np.logical_or(curr_excluded == 1)
+                maps_data["atrophy"] = curr_excluded == 1
             
             if "rpd" in self.area_exclusion.keys():
                 maps_data["rpd"] = np.logical_or(curr_excluded == 3, curr_excluded == 4)
