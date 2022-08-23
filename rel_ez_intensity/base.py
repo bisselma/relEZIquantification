@@ -21,10 +21,13 @@ from read_roi import read_roi_zip
 
 import eyepy as ep
 
+from heyex_tools import vol_reader
+from macustar_predictor import macustar_segmentation_analysis
 
 from rel_ez_intensity.getAdjacencyMatrix import plot_layers
 from rel_ez_intensity.seg_core import get_retinal_layers
 from rel_ez_intensity import utils as ut
+
 
 
 class OCTMap:
@@ -32,17 +35,21 @@ class OCTMap:
     def __init__(
             self,
             name: str,
+            volfile_path: Union[str, Path, IO] = None, 
             date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
             laterality: Optional[str] = None,
+            fovea_coords: Optional[tuple] = None,
             octmap: Optional[Dict] = None,
             ) -> None:
         self.name = name
+        self.volfile_path = volfile_path
         self.date_of_origin = date_of_origin
         self.scan_size = scan_size
         self.stackwidth = stackwidth
         self.laterality = laterality
+        self.fovea_coords = fovea_coords
         self.octmap = octmap
 
     
@@ -218,24 +225,31 @@ class RelEZIntensity:
         
         if laterality == "OS":
             maps = np.flip(maps, 1)
+
+        atrophy = maps  == 0.
         
         maps_shifted = shift(maps, translation)
+        atrophy_shifted = shift(atrophy, translation).astype(np.uint8)
+        
         # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
         sub = maps_shifted - (mean_rpedc.octmap["mean"] + (3. * mean_rpedc.octmap["std"])) 
 
 
-        sub = np.logical_or(sub > 0., maps_shifted <= 0.01)
-        sub_resized = cv2.resize(sub.astype(np.uint8), scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
-
+        sub = np.logical_or(sub > 0., maps_shifted <= 0.01).astype(np.uint8) # rpedc area
+        
+        sub_resized = cv2.resize(sub, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
+        atrophy_resized = cv2.resize(atrophy_shifted, scan_size[::-1], cv2.INTER_LINEAR)
     
         # structure element should have a radius of 100 um (Macustar-format (
         # ~30 um per bscan => ~ 3 px in y-direction and 2 * 3 px to get size of rectangle in y-dir. 
         # ~ 10 um per ascan => ~ 10 px in x-direction and 2 * 10 px to get size of rectangle in x-dir. 
         struct = np.ones((4, 10), dtype=bool)
-        sub_dilation = binary_dilation(sub_resized, structure = struct)   
-    
+        sub_dilation = binary_dilation(sub_resized, structure = struct).astype(int) * 2
+        atrophy_dilation = binary_dilation(atrophy_resized, structure = struct)   
+        
+        sub_dilation[atrophy_dilation] = 1 # atrophy
 
-        return sub_dilation.astype(bool)     
+        return sub_dilation  
     
     def get_rpd_map(
         self,
@@ -611,24 +625,26 @@ class RelEZIntensity:
                             
                         # a thickness map of rpedc
                         if "rpedc" in self.area_exclusion.keys():
-                            if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
+                            if any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth] == 1):
                                 excl[start_w + i] = 1
+                            if not any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth] == 1) and any(rpedc_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth] == 2):
+                                    excl[start_w + i] = 2
 
 
                         if "rpd" in self.area_exclusion.keys():
                             if any(rpd_map[idx_w, start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
-                                if excl[start_w + i] == 1:
-                                    excl[start_w + i] = 3 # if area contains rpedc and rpd
+                                if excl[start_w + i] == 2:
+                                    excl[start_w + i] = 4 # if area contains rpedc and rpd
                                     if self.area_exclusion["rpedc"]:
                                         continue
                                 
                                 if excl[start_w + i] == 0:
-                                    excl[start_w + i] = 2
+                                    excl[start_w + i] = 3
                                 
                                 if self.area_exclusion["rpd"]:
                                         continue    
                             else:
-                                if  excl[start_w + i] == 1 and self.area_exclusion["rpedc"]:
+                                if  excl[start_w + i] >= 1 and self.area_exclusion["rpedc"]:
                                     continue
 
 
@@ -676,19 +692,22 @@ class RelEZIntensity:
                 }
             
             if "rpedc" in self.area_exclusion.keys():
-                maps_data["rpedc"] = np.logical_or(curr_excluded == 1, curr_excluded == 3)
+                maps_data["rpedc"] = np.logical_or(curr_excluded == 2, curr_excluded == 4)
+                maps_data["atrophy"] = np.logical_or(curr_excluded == 1)
             
             if "rpd" in self.area_exclusion.keys():
-                maps_data["rpd"] = np.logical_or(curr_excluded == 2, curr_excluded == 3)
+                maps_data["rpd"] = np.logical_or(curr_excluded == 3, curr_excluded == 4)
           
             
             # create Map Objects containing the created maps 
             current_map = OCTMap(
                 "REZI-Map",
+                data_dict[".vol"][vol_id],
                 vol_data._meta["VisitDate"],
                 self.scan_size,
                 self.stackwidth,
                 lat,
+                (fovea_bscan, fovea_ascan),
                 maps_data
             )            
     
@@ -708,10 +727,44 @@ class RelEZIntensity:
                                             vol_data._meta["DOB"],
                                             [current_map])
                         
-    def get_microperimetry_grid_data(self, micro_img, slo_img, fovea_coord, use_gpu):
+    def get_microperimetry_grid_data(self, micro_img, slo_img, micro_data_path, micro_ir_path, visit, modus, use_gpu):
+
+        if len(self.patients) == 0:
+            raise Exception("So far, no patients have been analyzed. Please first use calculate_relEZI_maps()")
+
+        ir_list = ut.get_microperimetry_IR_image_list(micro_ir_path)
+
+        for patient in self.patients:
+            # read vol by macustarpredicter
+            analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+            vol_file_path=patient.visits[visit -1].volfile_path,
+            cache_segmentation=True,
+            use_gpu = use_gpu
+            )
 
 
-        A = ut.getTransformationMartix(micro_img, slo_img)
+            vol = analysis_obj.vol_file
+
+            # get slo image 
+            slo_img = vol.slo_image
+            h_slo, w_slo = slo_img.shape
+
+
+            stimuli_s = ut.get_microperimetry(
+                micro_data_path,
+                patient.pid,
+                visit,
+                "OD",
+                "S")
+
+            stimuli_m = ut.get_microperimetry(
+                micro_data_path,
+                patient.pid,
+                visit,
+                "OD",
+                "M")
+
+        
 
         # create grid coords
         px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
@@ -721,8 +774,68 @@ class RelEZIntensity:
         x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
         y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
 
-
+        # get slo_coordinates
+        grid = np.array(vol.grid)
         
+        # expected coordinates of scan field
+        p = np.array([
+            [0, 768],
+            [64, 64]
+            ])
+
+        # actual coordinates of scan field
+        q = np.array([
+            [grid[-1,0], grid[-1,2]],
+            [grid[-1,1], grid[-1,3]]
+            ])
+
+
+        # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
+        vol_R = ut.get2DRigidTransformation(q, p)
+
+        # coordinates of fovea center expected and patient
+        vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
+        vol_p_pat = np.array(patient.visits[visit-1].fovea_coords).T
+        
+        # translation in oct scan filed coordinate system
+        vol_t_F = (vol_p_fovea - vol_p_pat)
+        vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int)
+
+        # Matrix including complete transformation
+        vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
+
+        # transform slo_img
+        slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
+
+        # get microperimetry IR image 
+        img1_raw = cv2.imread(ir_list[patient.pid],0)
+        (h_micro, w_micro) = img1_raw.shape[:2]
+
+        # rotated IR image 
+        (cX, cY) = (w_micro // 2, h_micro // 2)
+        M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
+        img1_raw = cv2.warpAffine(img1_raw, M, (w_micro, h_micro))
+
+        # crop image to 30° x 30° around centered fovea 3.25° offset on each side
+        offset = int((h_micro/36) * 3)
+        img1 = img1_raw[offset:-offset,offset:-offset]
+        img1 = cv2.resize(img1,(h_slo,w_slo))
+
+
+        # calculate affine transformation matrix A
+        A = ut.get2DAffineTransformationMartix_by_SIFT(micro_img, slo_img)
+        
+
+        # transform grid
+        grid_coords = np.zeros((3,len(x)))
+        grid_coords[0,:] = x
+        grid_coords[1,:] = y
+        grid_coords[2,:] = np.ones((1,len(x)))
+
+        grid_coords_transf = A @ grid_coords
+
+        x_new = grid_coords_transf[0,:]
+        y_new = grid_coords_transf[1,:]
         # create slo field with relEZI-Map 
             # fovea-centered
             # calculated possible rigid transformation of relEZI-Map based on slo-grid coords

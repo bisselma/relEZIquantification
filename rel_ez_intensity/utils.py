@@ -31,47 +31,58 @@ grid_iamd = {
     30: (7, 0),   31:  (7, 90),  32:  (7, 180), 33:  (7, 270),
 }
 
+
 def get_microperimetry(
-        folder_path: Union[str, Path, IO] = None,
+        file_path: Union[str, Path, IO] = None,
         pid: str = None,
+        visit: int = None,
+        laterality: str = None,
         mode: str = None):
 
-    
-    # get list with all files
-    folder_list = os.listdir(folder_path) 
-    excl_file = None
-    
-    for folder_dir in folder_list:
-        full_path = os.path.join(folder_path, folder_dir)
-        if os.path.isdir(full_path):
-            folder_list.extend(os.path.join(folder_dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".xlsx"):
-            if pid in full_path and full_path.split("-")[-1].split(".")[0] == mode:
-                excl_file = full_path
-                break
-
-
-    if excl_file is None:
-        raise ValueError("ID is not in folder %s" % folder_path)
         
-     
-    df = pd.read_excel(excl_file)
-    data = df.columns.ravel()
-    return data[
+    df = pd.read_excel(file_path)
+    idx = np.where(df["UNIQUE_ID"] == pid + "-V" + str(visit) + "-" + laterality + "-" + mode)[0]
+    if len(idx) == 1:
+        data = df.loc[idx[0]]
+    else:
+        raise ValueError("ID is not in data %s" % file_path)
+        
+    micro = np.array(data[
             np.logical_and(
                 np.arange(0,len(data)) > 25,
                 np.logical_and(
                     np.arange(0,len(data)) < 25 + 2 * 33,
                     np.arange(0,len(data)) % 2 == 0)
-                    )]  
+                    )].array._ndarray)
+
+    micro[micro == "<0"] = -1
+
+    return (-1) * micro.astype(int) 
+
+def get_microperimetry_IR_image_list(
+     folder_path: Union[str, Path, IO] = None,
+    ) -> Optional[Dict]:
+
+    if not os.path.exists(folder_path):
+        raise NotADirectoryError("directory: " +  folder_path + " not exist")
+
+    return_list = {}
 
 
+    dir_list = os.listdir(folder_path)
+    for dir in dir_list:
+        full_path = os.path.join(folder_path, dir)
+        if os.path.isdir(full_path):
+            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+        if os.path.isfile(full_path) and full_path.endswith(".png"):
+            pid = "".join(w + "-" for w in full_path.split("\\")[-1].split("_")[1:2])
+            return_list[pid] = full_path
+    return return_list
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,
     ) -> Optional[str]:
     return file_path.split("\\")[-1].split(".")[0]
-
 
 def get_vol_list(
     folder_path: Union[str, Path, IO] = None,
@@ -93,8 +104,6 @@ def get_vol_list(
             return_list[pid] = full_path
     return return_list
             
-
-
 def get_rpedc_list(
     folder_path: Union[str, Path, IO] = None,
     ) -> Optional[Dict]:
@@ -133,7 +142,6 @@ def get_rpd_list(
             return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
     return return_list
 
-# get all data in origin folder by format 
 def get_list_by_format(
     folder_path: Union[str, Path, IO] = None,
     formats: Optional[tuple] = None,
@@ -171,7 +179,6 @@ def get_list_by_format(
             
     return return_list
 
-
 def get_mask_list(
     folder_path: Union[str, Path, IO] = None,
     ) -> Optional[Dict]:
@@ -206,7 +213,6 @@ def get_mask_list(
     return_list[current_id] = tmp_mask_list[::-1]
     return return_list
 
-
 def get_seg_by_mask(mask_path, n):
     """
     Args:
@@ -227,8 +233,7 @@ def get_seg_by_mask(mask_path, n):
     
     return layer[0,:]
 
-
-def getTransformationMartix(img1, img2):
+def get2DAffineTransformationMartix_by_SIFT(img1, img2):
     # Create our SIFT detector and detect keypoints and descriptors
     sift = cv2.SIFT_create()
     # find the keypoints and descriptors with SIFT
@@ -238,7 +243,7 @@ def getTransformationMartix(img1, img2):
     # FLANN parameters
     FLANN_INDEX_KDTREE = 1
     index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 6)
-    search_params = dict(checks=1000)   # or pass empty dictionary
+    search_params = dict(checks=1500)   # or pass empty dictionary
     flann = cv2.FlannBasedMatcher(index_params,search_params)
     matches = flann.knnMatch(des1,des2,k=2)
     
@@ -246,7 +251,7 @@ def getTransformationMartix(img1, img2):
     matchesMask = [[0,0] for i in range(len(matches))]
     # ratio test as per Lowe's paper
     for i,(m,n) in enumerate(matches):
-        if m.distance < 0.55*n.distance:
+        if m.distance < 0.57*n.distance:
             matchesMask[i]=[1,0]
             
     k1_l = []
@@ -273,6 +278,37 @@ def getTransformationMartix(img1, img2):
     A_cal = a.reshape(2,3)
 
     return A_cal
+
+def get2DRigidTransformationMatrix(p, q):
+
+    """
+    Args:
+        p (np.array): 2x2 Matrix with column-wise vector [x_n, y_n].T (Source)
+        q (np.array): 2x2 Matrix with column-wise vector [x_n, y_n].T (Target)
+    """
+
+    # create pseudo inverse matrix 
+    M = np.zeros((4,4))
+    M[0:2,:-1] = np.append(p, np.ones((1,2)),axis=0).T
+    M[2:,0] = p[1,:]
+    M[2:,1] = -p[0,:]
+    M[2:,-1] = np.ones((2,))
+    
+    b = q.flatten()[:,None]
+
+    M_piv = np.linalg.pinv(M)
+    r = M_piv@b
+
+    # calculate rotation angle alpha
+    alpha = np.arcsin(-r[1,0])[...]
+
+
+    R = np.array(
+        [[np.cos(alpha), -np.sin(alpha), r[2,0]],
+        [np.sin(alpha), np.cos(alpha), r[3,0]]])
+
+    return R 
+
 
 if __name__ == '__main__':
     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar"
