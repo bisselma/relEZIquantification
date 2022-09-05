@@ -859,7 +859,7 @@ class RelEZIntensity:
 
             yy,xx = np.mgrid[:slo_img.shape[0], :slo_img.shape[1]]
 
-            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,33,1), stimuli_s, stimuli_m, y_new_m, x_new_m, y_new_s, x_new_s):
+            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m, x_new_m, y_new_s, x_new_s):
                 mask_iamd_m[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = num 
                 mask_iamd_s[((yy - y_cur_s) ** 2) + ((xx - x_cur_s)**2) < radius ** 2] = num 
                 stimuli_m_map[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = stil_m
