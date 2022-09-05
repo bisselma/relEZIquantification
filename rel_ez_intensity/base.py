@@ -695,8 +695,9 @@ class RelEZIntensity:
                 }
             
             if "rpedc" in self.area_exclusion.keys():
-                maps_data["rpedc"] = np.logical_or(curr_excluded == 2, curr_excluded == 4)
                 maps_data["atrophy"] = curr_excluded == 1
+                maps_data["rpedc"] = np.logical_or(curr_excluded == 2, curr_excluded == 4)
+                
             
             if "rpd" in self.area_exclusion.keys():
                 maps_data["rpd"] = np.logical_or(curr_excluded == 3, curr_excluded == 4)
@@ -730,12 +731,12 @@ class RelEZIntensity:
                                             vol_data._meta["DOB"],
                                             [current_map])
                         
-    def get_microperimetry_grid_data(self, micro_img, slo_img, micro_data_path, micro_ir_path, visit, modus, use_gpu):
+    def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
 
         if len(self.patients) == 0:
             raise Exception("So far, no patients have been analyzed. Please first use calculate_relEZI_maps()")
 
-        ir_list = ut.get_microperimetry_IR_image_list(micro_ir_path)
+        ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
         for patient in self.patients:
             # read vol by macustarpredicter
@@ -769,94 +770,107 @@ class RelEZIntensity:
 
         
 
-        # create grid coords
-        px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
-        ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
-        ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+            # create grid coords
+            px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
+            ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
+            ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
 
-        x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
-        y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
+            x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
+            y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
 
-        # get slo_coordinates
-        grid = np.array(vol.grid)
+            # get slo_coordinates
+            grid = np.array(vol.grid)
         
-        # expected coordinates of scan field
-        p = np.array([
-            [0, 768],
-            [64, 64]
-            ])
+            # expected coordinates of scan field
+            p = np.array([
+                [0, 768],
+                [64, 64]
+                ])
 
-        # actual coordinates of scan field
-        q = np.array([
-            [grid[-1,0], grid[-1,2]],
-            [grid[-1,1], grid[-1,3]]
-            ])
+            # actual coordinates of scan field
+            q = np.array([
+                [grid[-1,0], grid[-1,2]],
+                [grid[-1,1], grid[-1,3]]
+                ])
 
 
-        # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-        vol_R = ut.get2DRigidTransformation(q, p)
+            # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
+            vol_R = ut.get2DRigidTransformation(q, p)
 
-        # coordinates of fovea center expected and patient
-        vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
-        vol_p_pat = np.array(patient.visits[visit-1].fovea_coords).T
+            # coordinates of fovea center expected and patient
+            vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
+            vol_p_pat = np.array(patient.visits[visit-1].fovea_coords).T
         
-        # translation in oct scan filed coordinate system
-        vol_t_F = (vol_p_fovea - vol_p_pat)
-        vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int)
+            # translation in oct scan filed coordinate system
+            vol_t_F = (vol_p_fovea - vol_p_pat)
+            vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int)
 
-        # Matrix including complete transformation
-        vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
+            # Matrix including complete transformation
+            vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
 
-        # transform slo_img
-        slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
+            # transform slo_img
+            slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
-        # get microperimetry IR image 
-        img1_raw = cv2.imread(ir_list[patient.pid],0)
-        (h_micro, w_micro) = img1_raw.shape[:2]
+            # get microperimetry IR image m and s
+            img1_raw_m = cv2.imread(ir_list_m[patient.pid],0)
+            img1_raw_s = cv2.imread(ir_list_s[patient.pid],0)
+            (h_micro, w_micro) = img1_raw_m.shape[:2]
 
-        # rotated IR image 
-        (cX, cY) = (w_micro // 2, h_micro // 2)
-        M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
-        img1_raw = cv2.warpAffine(img1_raw, M, (w_micro, h_micro))
+            # rotated IR image 
+            (cX, cY) = (w_micro // 2, h_micro // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
+            img1_raw_m = cv2.warpAffine(img1_raw_m, M, (w_micro, h_micro))
+            img1_raw_s = cv2.warpAffine(img1_raw_s, M, (w_micro, h_micro))
 
-        # crop image to 30° x 30° around centered fovea 3.25° offset on each side
-        offset = int((h_micro/36) * 3)
-        img1 = img1_raw[offset:-offset,offset:-offset]
-        img1 = cv2.resize(img1,(h_slo,w_slo))
-
-
-        # calculate affine transformation matrix A
-        A = ut.get2DAffineTransformationMartix_by_SIFT(micro_img, slo_img)
-        
-
-        # transform grid
-        grid_coords = np.zeros((3,len(x)))
-        grid_coords[0,:] = x
-        grid_coords[1,:] = y
-        grid_coords[2,:] = np.ones((1,len(x)))
-
-        grid_coords_transf = A @ grid_coords
-
-        x_new = grid_coords_transf[0,:]
-        y_new = grid_coords_transf[1,:]
-        # create slo field with relEZI-Map 
-            # fovea-centered
-            # calculated possible rigid transformation of relEZI-Map based on slo-grid coords
-
-        # calculate new grid positions of iamd-grid
+            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
+            offset = int((h_micro/36) * 3)
+            img1_m = img1_raw_m[offset:-offset,offset:-offset]
+            img1_m = cv2.resize(img1_m,(h_slo,w_slo))
+            img1_s = img1_raw_s[offset:-offset,offset:-offset]
+            img1_s = cv2.resize(img1_s,(h_slo,w_slo))
 
 
-        
-        
-        # transform fovea coords by rigid transformation matrix R
-        # calculate new delta_y and delta x by 
-
+            # calculate affine transformation matrix A
+            A_m = ut.get2DAffineTransformationMartix_by_SIFT(img1_m, slo_img)
+            A_s = ut.get2DAffineTransformationMartix_by_SIFT(img1_m, slo_img)
         
 
-        # return data_points [1....33]
-        pass
+            # transform grid
+            grid_coords = np.zeros((3,len(x)))
+            grid_coords[0,:] = x
+            grid_coords[1,:] = y
+            grid_coords[2,:] = np.ones((1,len(x)))
+
+            grid_coords_transf_m = A_m @ grid_coords
+            grid_coords_transf_s = A_s @ grid_coords
+
+            x_new_m = grid_coords_transf_m[0,:]
+            y_new_m = grid_coords_transf_m[1,:]
+
+            x_new_s = grid_coords_transf_s[0,:]
+            y_new_s = grid_coords_transf_s[1,:]
 
 
+            # create binary image with iamd grid 
+            mask_iamd_m = np.zeros_like(slo_img)
+            mask_iamd_s = np.zeros_like(slo_img)
+            stimuli_m_map = np.zeros_like(slo_img)
+            stimuli_s_map = np.zeros_like(slo_img)
+
+            yy,xx = np.mgrid[:slo_img.shape[0], :slo_img.shape[1]]
+
+            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,33,1), stimuli_s, stimuli_m, y_new_m, x_new_m, y_new_s, x_new_s):
+                mask_iamd_m[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = num 
+                mask_iamd_s[((yy - y_cur_s) ** 2) + ((xx - x_cur_s)**2) < radius ** 2] = num 
+                stimuli_m_map[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = stil_m
+                stimuli_s_map[((yy - y_cur_s) ** 2) + ((xx - x_cur_s)**2) < radius ** 2] = stil_s
+                
+
+            
+            patient.visit.octmap["micro_mask_m"] = mask_iamd_m
+            patient.visit.octmap["micro_mask_s"] = mask_iamd_s
+            patient.visit.octmap["micro_stim_m"] = stimuli_m_map
+            patient.visit.octmap["micro_stim_s"] = stimuli_s_map
 
     def create_ssd_maps(
         self,
@@ -1213,8 +1227,11 @@ class RelEZIntensity:
         
         b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten()
     
-        
-        header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
+        if project == "macustar micro":
+            header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]",
+             "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "m stimulus", "m stimulus grid", "m stimulus", "ez", "elm"]
+        else:
+            header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
 
         if os.path.isdir(folder_path):
             workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
@@ -1229,28 +1246,60 @@ class RelEZIntensity:
             
         row = 1
         
-        for i, ids in enumerate(self.patients.keys()):
+        if project == "macutar micro":
+            for i, ids in enumerate(self.patients.keys()):
             
-            for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
                 
-                   worksheet.write(row, j * len(header), ids)
-                   worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
-                   worksheet.write_column(row, j * len(header) + 2, b_scan_n)
-                   worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
-                   worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
-                   worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
-                   worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
-                   worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
-                   worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+                    worksheet.write(row, j * len(header), ids) # ID
+                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
+                    worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
+                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
+                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
+                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
+                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
+                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
+                    worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
+                    worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
+                    worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
+                    worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
+                    worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
+                    worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
                    
-            row += nos * self.scan_size[0]
+                row += nos * self.scan_size[0]
             
-            if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
-                workbook.close()
-                workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
-                worksheet = workbook.add_worksheet()            
-                worksheet.write_row(0, 0, header)   
-                row = 1
+                if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
+                    workbook.close()
+                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
+                    worksheet = workbook.add_worksheet()            
+                    worksheet.write_row(0, 0, header)   
+                    row = 1
+
+
+        else:
+            for i, ids in enumerate(self.patients.keys()):
+            
+                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                
+                    worksheet.write(row, j * len(header), ids)
+                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                    worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+                   
+                row += nos * self.scan_size[0]
+            
+                if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
+                    workbook.close()
+                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
+                    worksheet = workbook.add_worksheet()            
+                    worksheet.write_row(0, 0, header)   
+                    row = 1
                 
         workbook.close()        
                 

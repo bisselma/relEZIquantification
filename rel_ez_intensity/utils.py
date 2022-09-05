@@ -66,7 +66,8 @@ def get_microperimetry_IR_image_list(
     if not os.path.exists(folder_path):
         raise NotADirectoryError("directory: " +  folder_path + " not exist")
 
-    return_list = {}
+    return_list_m = {}
+    return_list_s = {}
 
 
     dir_list = os.listdir(folder_path)
@@ -76,8 +77,13 @@ def get_microperimetry_IR_image_list(
             dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
         if os.path.isfile(full_path) and full_path.endswith(".png"):
             pid = "".join(w + "-" for w in full_path.split("\\")[-1].split("_")[1:2])
-            return_list[pid] = full_path
-    return return_list
+
+            if full_path.split("\\")[-1].split("_")[4][0] == "m":
+                return_list_m[pid] = full_path
+            else:
+                return_list_s[pid] = full_path
+
+    return return_list_m, return_list_s
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,
