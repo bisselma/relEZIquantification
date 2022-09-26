@@ -255,10 +255,25 @@ def get2DAffineTransformationMartix_by_SIFT(img1, img2):
     
     # Need to draw only good matches, so create a mask
     matchesMask = [[0,0] for i in range(len(matches))]
+
+    # counter 
+    count = 0
+    dist_factor = 0.5
     # ratio test as per Lowe's paper
-    for i,(m,n) in enumerate(matches):
-        if m.distance < 0.5*n.distance:
-            matchesMask[i]=[1,0]
+    while True:
+        for i,(m,n) in enumerate(matches):
+            if m.distance < dist_factor * n.distance:
+                matchesMask[i]=[1,0]
+                count+=1
+        
+        if count >= 3:
+            break
+        else:
+            count = 0
+            dist_factor+=0.01
+            matchesMask = [[0,0] for i in range(len(matches))]
+
+    
             
     k1_l = []
     k2_l = []
