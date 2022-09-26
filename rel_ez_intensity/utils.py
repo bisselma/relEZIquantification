@@ -257,7 +257,7 @@ def get2DAffineTransformationMartix_by_SIFT(img1, img2):
     matchesMask = [[0,0] for i in range(len(matches))]
     # ratio test as per Lowe's paper
     for i,(m,n) in enumerate(matches):
-        if m.distance < 0.57*n.distance:
+        if m.distance < 0.65*n.distance:
             matchesMask[i]=[1,0]
             
     k1_l = []
