@@ -258,7 +258,7 @@ def get2DAffineTransformationMartix_by_SIFT(img1, img2):
 
     # counter 
     count = 0
-    dist_factor = 0.55
+    dist_factor = 0.5
     # ratio test as per Lowe's paper
     while True:
         for i,(m,n) in enumerate(matches):
