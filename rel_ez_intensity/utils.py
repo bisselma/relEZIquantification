@@ -78,7 +78,7 @@ def get_microperimetry_IR_image_list(
         if os.path.isfile(full_path) and full_path.endswith(".png"):
             pid = full_path.split("\\")[-1].split("_")[1] + "-" + full_path.split("\\")[-1].split("_")[2] 
 
-            if full_path.split("\\")[-1].split("_")[6][0] == "m":
+            if full_path.split("\\")[-1].split("_")[5][0] == "m":
                 return_list_m[pid] = full_path
             else:
                 return_list_s[pid] = full_path
