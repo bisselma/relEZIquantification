@@ -249,7 +249,7 @@ def get2DAffineTransformationMartix_by_SIFT(img1, img2):
     # FLANN parameters
     FLANN_INDEX_KDTREE = 1
     index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 6)
-    search_params = dict(checks=1500)   # or pass empty dictionary
+    search_params = dict(checks=2000)   # or pass empty dictionary
     flann = cv2.FlannBasedMatcher(index_params,search_params)
     matches = flann.knnMatch(des1,des2,k=2)
     
@@ -258,7 +258,7 @@ def get2DAffineTransformationMartix_by_SIFT(img1, img2):
 
     # counter 
     count = 0
-    dist_factor = 0.5
+    dist_factor = 0.55
     # ratio test as per Lowe's paper
     while True:
         for i,(m,n) in enumerate(matches):
