@@ -1,6 +1,6 @@
 import torch
 
-from common.common_util import simple_nms
+from rel_ez_intensity.superretina.common.common_util import simple_nms
 
 
 def update_value_map(value_map, points, value_map_config):

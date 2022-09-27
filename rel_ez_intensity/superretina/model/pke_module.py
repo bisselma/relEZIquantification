@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 from torch.nn import functional as F
 
-from common.common_util import sample_keypoint_desc, nms
-from model.record_module import update_value_map
+from rel_ez_intensity.superretina.common.common_util import sample_keypoint_desc, nms
+from rel_ez_intensity.superretina.model.record_module import update_value_map
 
 
 def mapping_points(grid, points, h, w):
