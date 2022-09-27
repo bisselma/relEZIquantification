@@ -832,7 +832,7 @@ class RelEZIntensity:
 
             # calculate affine transformation matrix A
             A_m = ut.get2DAffineTransformationMartix_by_SIFT(img1_m, slo_img)
-            A_s = ut.get2DAffineTransformationMartix_by_SIFT(img1_m, slo_img)
+            A_s = ut.get2DAffineTransformationMartix_by_SIFT(img1_s, slo_img)
         
 
             # transform grid

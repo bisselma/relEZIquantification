@@ -6,13 +6,68 @@ from typing import Callable, Dict, List, Optional, Union, IO
 import os
 import cv2 
 import numpy as np
+import torch
 from torch import full
+from torchvision import transforms
 import matplotlib.pyplot as plt 
 from scipy.ndimage import shift
 import eyepy as ep
 import pandas as pd
+from PIL import Image
+
+from rel_ez_intensity.superretina.model.super_retina import SuperRetina
+from rel_ez_intensity.superretina.common.common_util import pre_processing, simple_nms, remove_borders, sample_keypoint_desc
+
+# global config data for superretina
+model_image_width = 768
+model_image_height = 768
+use_matching_trick = True
 
 
+nms_size = 10
+nms_thresh = 0.01
+
+knn_thresh = 0.9
+
+# modul load
+device = "cuda:0"
+device = torch.device(device if torch.cuda.is_available() else "cpu")
+model_save_path = ".\\save\\SuperRetina.pth"
+checkpoint = torch.load(model_save_path, map_location=device)
+model = SuperRetina()
+model.load_state_dict(checkpoint['net'])
+model.to(device)
+
+# Input a batch with two images to SuperRetina 
+def model_run(query_tensor, refer_tensor):
+    inputs = torch.cat((query_tensor.unsqueeze(0), refer_tensor.unsqueeze(0)))
+    inputs = inputs.to(device)
+
+    with torch.no_grad():
+        detector_pred, descriptor_pred = model(inputs)
+
+    scores = simple_nms(detector_pred, nms_size)
+
+    b, _, h, w = detector_pred.shape
+    scores = scores.reshape(-1, h, w)
+
+    keypoints = [
+        torch.nonzero(s > nms_thresh)
+        for s in scores]
+
+    scores = [s[tuple(k.t())] for s, k in zip(scores, keypoints)]
+
+    # Discard keypoints near the image borders
+    keypoints, scores = list(zip(*[
+        remove_borders(k, s, 4, h, w)
+        for k, s in zip(keypoints, scores)]))
+
+    keypoints = [torch.flip(k, [1]).float().data for k in keypoints]
+
+    descriptors = [sample_keypoint_desc(k[None], d[None], 8)[0].cpu().data
+                   for k, d in zip(keypoints, descriptor_pred)]
+    keypoints = [k.cpu() for k in keypoints]
+    return keypoints, descriptors
 
 # key (id): (Eccentricity, Angularposition)
 grid_iamd = {
@@ -238,6 +293,75 @@ def get_seg_by_mask(mask_path, n):
             layer[0,i] = idxs[0]
     
     return layer[0,:]
+
+def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
+
+
+    image_transformer = transforms.Compose([
+        transforms.Resize((model_image_height, model_image_width)),
+        transforms.ToTensor()])
+
+    knn_matcher = cv2.BFMatcher(cv2.NORM_L2)
+
+    # image shape 
+    image_height, image_width = refer_image.shape
+
+    query_image = pre_processing(query_image)
+    refer_image = pre_processing(refer_image)
+    query_image = (query_image * 255).astype(np.uint8)
+    refer_image = (refer_image * 255).astype(np.uint8)
+
+    # scaled image size
+    query_tensor = image_transformer(Image.fromarray(query_image))
+    refer_tensor = image_transformer(Image.fromarray(refer_image))
+
+    keypoints, descriptors = model_run(query_tensor, refer_tensor)
+
+    query_keypoints, refer_keypoints = keypoints[0], keypoints[1]
+    query_desc, refer_desc = descriptors[0].permute(1, 0).numpy(), descriptors[1].permute(1, 0).numpy()
+
+    # mapping keypoints to scaled keypoints
+    cv_kpts_query = [cv2.KeyPoint(int(i[0] / model_image_width * image_width),
+                              int(i[1] / model_image_height * image_height), 30)  # 30 is keypoints size, which can be ignored
+                    for i in query_keypoints]
+    cv_kpts_refer = [cv2.KeyPoint(int(i[0] / model_image_width * image_width),
+                              int(i[1] / model_image_height * image_height), 30)
+                    for i in refer_keypoints]  
+
+    # keypoint matching
+    goodMatch = []
+    status = []
+    try:
+        matches = knn_matcher.knnMatch(query_desc, refer_desc, k=2)
+        for m, n in matches:
+            if m.distance < knn_thresh * n.distance:
+                goodMatch.append(m)
+                status.append(True)
+            else:
+                status.append(False)
+    except Exception:
+        pass
+
+    # find homographic matrix H_m 
+    H_m = None
+    #inliers_num_rate = 0
+    good = goodMatch.copy()
+    if len(goodMatch) >= 4:
+        src_pts = [cv_kpts_query[m.queryIdx].pt for m in good]
+        src_pts = np.float32(src_pts).reshape(-1, 1, 2)
+        dst_pts = [cv_kpts_refer[m.trainIdx].pt for m in good]
+        dst_pts = np.float32(dst_pts).reshape(-1, 1, 2)
+
+        H_m, mask = cv2.findHomography(src_pts, dst_pts, cv2.LMEDS)
+
+        good = np.array(good)[mask.ravel() == 1]
+        status = np.array(status)
+        temp = status[status==True]
+        temp[mask.ravel() == 0] = False
+        status[status==True] = temp
+        #inliers_num_rate = mask.sum() / len(mask.ravel())
+
+    return H_m
 
 def get2DAffineTransformationMartix_by_SIFT(img1, img2):
     # Create our SIFT detector and detect keypoints and descriptors
