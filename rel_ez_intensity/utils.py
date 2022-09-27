@@ -4,7 +4,6 @@ from importlib.machinery import PathFinder
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union, IO
 import os
-os.chdir("..")
 import cv2 
 import numpy as np
 import torch
