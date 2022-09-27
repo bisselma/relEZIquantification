@@ -31,7 +31,7 @@ nms_thresh = 0.01
 knn_thresh = 0.9
 
 # modul load
-print(os.path.abspath(config.__file__))
+print(os.path.abspath(config))
 device = "cuda:0"
 device = torch.device(device if torch.cuda.is_available() else "cpu")
 model_save_path = '.\\superretina\\save\\SuperRetina.pth'
