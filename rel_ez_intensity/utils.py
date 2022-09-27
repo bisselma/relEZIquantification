@@ -34,7 +34,7 @@ knn_thresh = 0.9
 print(os.path.dirname(superretina.__file__))
 device = "cuda:0"
 device = torch.device(device if torch.cuda.is_available() else "cpu")
-model_save_path = ' os.path.dirname(superretina.__file__) + " \\save\\SuperRetina.pth"
+model_save_path = os.path.dirname(superretina.__file__) + " \\save\\SuperRetina.pth"
 checkpoint = torch.load(model_save_path, map_location=device)
 model = SuperRetina()
 model.load_state_dict(checkpoint['net'])
