@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.1.6"
+__version__ = "0.2"
 
 
 #with open("README.rst") as readme_file:
@@ -16,7 +16,9 @@ __version__ = "0.1.6"
  #   history = history_file.read()
 
 requirements = ["eyepie==0.3.7", "numpy>=1.22", "opencv-python", "opencv-python-headless", "Pillow",
-    "xlsxwriter", "read-roi"]
+    "xlsxwriter", "read-roi","imgaug==0.4.0", "matplotlib==3.5.1", "PyYAML==6.0", "scikit_learn==1.1.1", "scipy==1.8.0",
+    "torch==1.8.1", "torchvision==0.9.1", "tqdm==4.64.0"]
+
 setup_requirements = ["pytest-runner"]
 
 test_requirements = ["pytest>=3"]
