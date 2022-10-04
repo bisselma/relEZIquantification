@@ -734,7 +734,7 @@ class RelEZIntensity:
     def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
 
         if len(self.patients) == 0:
-            raise Exception("So far, no patients have been analyzed. Please first use calculate_relEZI_maps()")
+            raise Exception("So far, no patients have been analyzed, please first use calculate_relEZI_maps()")
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
@@ -754,18 +754,23 @@ class RelEZIntensity:
             h_slo, w_slo = slo_img.shape
 
 
+            # laterality 
+            lat = patient.visits[visit -1].laterality
+
+
+
             stimuli_s = ut.get_microperimetry(
                 micro_data_path,
                 patient.pid,
                 visit,
-                "OD",
+                lat,
                 "S")
 
             stimuli_m = ut.get_microperimetry(
                 micro_data_path,
                 patient.pid,
                 visit,
-                "OD",
+                lat,
                 "M")
 
         
@@ -788,10 +793,20 @@ class RelEZIntensity:
                 ])
 
             # actual coordinates of scan field
-            q = np.array([
-                [grid[-1,0], grid[-1,2]],
-                [grid[-1,1], grid[-1,3]]
-                ])
+            if lat == "OD":
+                q = np.array([
+                    [grid[-1,0], grid[-1,2]],
+                    [grid[-1,1], grid[-1,3]]
+                    ])
+            else:
+                # flip slo_img
+                slo_img = np.flip(slo_img,1) 
+                
+                # Coordinates are mirrored on the x-axis
+                q = np.array([
+                    [768 - grid[-1,0],768 - grid[-1,2]],
+                    [grid[-1,3], grid[-1,1]]
+                    ])                
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
@@ -803,7 +818,7 @@ class RelEZIntensity:
         
             # translation in oct scan filed coordinate system
             vol_t_F = (vol_p_fovea - vol_p_pat)
-            vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int)
+            vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int) # bscan number in pixel [(640/241) => pixel/bscan]
 
             # Matrix including complete transformation
             vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
@@ -822,6 +837,11 @@ class RelEZIntensity:
             img1_raw_m = cv2.warpAffine(img1_raw_m, M, (w_micro, h_micro))
             img1_raw_s = cv2.warpAffine(img1_raw_s, M, (w_micro, h_micro))
 
+            # flip microperimetry-IR image
+            if lat == "OS":
+                img1_raw_m = np.flip(img1_raw_m, 1)
+                img1_raw_s = np.flip(img1_raw_s, 1)
+
             # crop image to 30° x 30° around centered fovea 3.25° offset on each side
             offset = int((h_micro/36) * 3)
             img1_m = img1_raw_m[offset:-offset,offset:-offset]
@@ -831,8 +851,8 @@ class RelEZIntensity:
 
 
             # calculate affine transformation matrix A
-            A_m = ut.get2DAffineTransformationMartix_by_SIFT(img1_m, slo_img)
-            A_s = ut.get2DAffineTransformationMartix_by_SIFT(img1_s, slo_img)
+            H_m = ut.get2DAffineTransformationMartix_by_SuperRetina(img1_m, slo_img)
+            H_s = ut.get2DAffineTransformationMartix_by_SuperRetina(img1_s, slo_img)
         
 
             # transform grid
@@ -841,8 +861,8 @@ class RelEZIntensity:
             grid_coords[1,:] = y
             grid_coords[2,:] = np.ones((1,len(x)))
 
-            grid_coords_transf_m = A_m @ grid_coords
-            grid_coords_transf_s = A_s @ grid_coords
+            grid_coords_transf_m = H_m @ grid_coords
+            grid_coords_transf_s = H_s @ grid_coords
 
             x_new_m = grid_coords_transf_m[0,:]
             y_new_m = grid_coords_transf_m[1,:]
@@ -1230,7 +1250,7 @@ class RelEZIntensity:
         if project == "macustar micro":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]",
              "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "m stimulus", "m stimulus grid", "m stimulus", "ez", "elm"]
-        else:
+        elif project == "macustar":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
 
         if os.path.isdir(folder_path):
@@ -1277,7 +1297,7 @@ class RelEZIntensity:
                     row = 1
 
 
-        else:
+        if project == "macutar":
             for i, ids in enumerate(self.patients.keys()):
             
                 for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right

@@ -24,10 +24,8 @@ model_image_width = 768
 model_image_height = 768
 use_matching_trick = True
 
-
 nms_size = 10
 nms_thresh = 0.01
-
 knn_thresh = 0.9
 
 # modul load
@@ -38,6 +36,7 @@ checkpoint = torch.load(model_save_path, map_location=device)
 model = SuperRetina()
 model.load_state_dict(checkpoint['net'])
 model.to(device)
+
 
 # Input a batch with two images to SuperRetina 
 def model_run(query_tensor, refer_tensor):
@@ -345,7 +344,6 @@ def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image)
 
     # find homographic matrix H_m 
     H_m = None
-    #inliers_num_rate = 0
     good = goodMatch.copy()
     if len(goodMatch) >= 4:
         src_pts = [cv_kpts_query[m.queryIdx].pt for m in good]
@@ -360,7 +358,6 @@ def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image)
         temp = status[status==True]
         temp[mask.ravel() == 0] = False
         status[status==True] = temp
-        #inliers_num_rate = mask.sum() / len(mask.ravel())
 
     return H_m
 
