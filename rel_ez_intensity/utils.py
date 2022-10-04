@@ -10,10 +10,16 @@ import torch
 from torch import full
 from torchvision import transforms
 import matplotlib.pyplot as plt 
+import matplotlib
+import matplotlib.pylab as pl
+from matplotlib.colors import ListedColormap
+from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import shift
+from scipy.interpolate import griddata
 import eyepy as ep
 import pandas as pd
 from PIL import Image
+
 
 from rel_ez_intensity import superretina  
 from rel_ez_intensity.superretina.model.super_retina import SuperRetina
@@ -452,6 +458,114 @@ def get2DRigidTransformationMatrix(p, q):
 
     return R 
 
+def sample_circle(x,y, radius, field, no_dc_ratio):
+    yy,xx = np.mgrid[:field.shape[0], :field.shape[1]]
+
+    mask = ((yy - y) ** 2) + ((xx - x)**2) < radius ** 2
+
+
+    if len(np.where(np.isnan(field[mask]))[0]) / len(np.where(mask)[0]) <= no_dc_ratio:
+        mean_i = np.nanmean(field[mask])
+        if mean_i > 0 and mean_i != np.nan:
+            return np.log(mean_i)
+        else:
+            return np.nan
+    else:
+        return np.nan
+
+def exc_circle(x,y, radius, field):
+    yy,xx = np.mgrid[:field.shape[0], :field.shape[1]]
+
+    mask = ((yy - y) ** 2) + ((xx - x)**2) < radius ** 2
+
+    return len(np.where(field[mask])[0]) / len(np.where(mask)[0])
+
+def interpolate_grid(x,y,z,w,h, point_radius):
+
+    yy,xx = np.mgrid[:h, :w]
+
+    zi = griddata((x,y),z,(xx,yy),method='linear')
+
+
+    return zi
+
+
+def show_grid_over_relEZIMap(
+    slo_img,
+    rel_ez_i_map,
+    x,
+    y,
+    center,
+    stimuli,
+    H_matrix,
+    eccentricity,
+    ppd, # pixel per degree
+    savefig,
+    pid,
+    showfig,
+    path
+    ):
+    
+    # create rel_ezi heatmap illustration image
+    rel_ez_i_map_ill = np.zeros_like(slo_img)
+    rel_ez_i_map_ill[64:-64, :] = rel_ez_i_map
+    
+    # calculate transformed intensity map
+    w, h = rel_ez_i_map_ill.shape  
+    rel_ez_i_map_ill = cv2.warpAffine(rel_ez_i_map_ill,H_matrix, (w, h))
+
+
+    rads = np.arange(0,360,20) *  np.pi / 180
+    ecc  = np.ones((1, len(rads))) * eccentricity * ppd
+    x_ill = ((np.sin(rads) * ecc) + center[0])
+    y_ill = ((np.cos(rads) * ecc) + center[1])
+
+    x_ill = np.append(x_ill, x[None,:])        
+    y_ill = np.append(y_ill, y[None,:])
+
+
+
+    # radius according to Goldmann III 0.43° diameter
+    radius = (slo_img.shape[0]/30) * (0.43/2)
+
+    rel_EZI = np.array([sample_circle(x_i,y_i, radius, rel_ez_i_map_ill, 0.8) for x_i, y_i in zip(x_ill,y_ill)])
+
+    rel_EZI[np.isnan(rel_EZI)] = np.nanmin(rel_EZI) # set nan areas to min 
+
+
+    plt.figure(figsize = (10,10))
+    ax = plt.gca()
+
+
+    plt.axis('off')
+
+    int_grid = interpolate_grid(
+                    x= x_ill,
+                    y= y_ill,
+                    z= rel_EZI,
+                    w = slo_img.shape[1],
+                    h = slo_img.shape[0],
+                    point_radius=0
+                    )
+
+    plt.imshow(slo_img, cmap="gray")
+    plt.imshow(int_grid, cmap = "RdYlGn", alpha=0.5, vmax= 4)
+    im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=-30, vmax=0.5 * np.nanmax(stimuli))
+    for i, val in enumerate(stimuli):
+        plt.annotate(str(val).replace("-",""), (x[i], y[i]))
+
+        
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)  
+    cbar = plt.colorbar(im, cax=cax)
+    ytl_obj = plt.getp(cax, 'yticklabels')                         
+    plt.setp(ytl_obj, color="black")                    
+    cbar.set_label("dB", color="black", weight='bold')  
+
+    if not showfig:
+        plt.ioff()
+    if savefig:
+        plt.savefig(path + "\\" + pid + ".png")
 
 if __name__ == '__main__':
     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar"

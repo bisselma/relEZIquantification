@@ -892,7 +892,7 @@ class RelEZIntensity:
             patient.visit.octmap["micro_stim_m"] = stimuli_m_map
             patient.visit.octmap["micro_stim_s"] = stimuli_s_map
 
-    def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, visit, use_gpu):
+    def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
             raise Exception("So far, no patients have been analyzed, please first use calculate_relEZI_maps()")
 
@@ -1053,7 +1053,8 @@ class RelEZIntensity:
                 slo_img.shape[0] / 30, # pixel per degree
                 True,
                 patient.pid + "_M",
-                True
+                True,
+                target_path
                 )
 
             ut.show_grid_over_relEZIMap(
@@ -1068,7 +1069,8 @@ class RelEZIntensity:
                 slo_img.shape[0] / 30, # pixel per degree
                 True,
                 patient.pid + "_S",
-                True
+                True,
+                target_path
                 )
 
     def create_ssd_maps(
@@ -1506,55 +1508,8 @@ class RelEZIntensity:
             
 
 if __name__ == '__main__':
-    
-    fovea_coords = {
-        "001-0001": (121,380)}
-# =============================================================================
-#     fovea_coords = {
-#             "001-0006": (121,384),
-#             "001-0007": (121,368),
-#             "001-0008": (120,380),
-#             "001-0009": (118,384),
-#             "001-0010": (123,385)
-#     }
-# =============================================================================
-    
-    #path_c = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\controls"
-    #path_i = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab\\test_data\\macustar\\test_rel_ez_i_data"
-    
-    
-    # path
-    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
-    data = RelEZIntensity()
-    #ut.change_vol_filename(path_c)
-    #data.create_ssd_maps(path, fovea_coords, (241, 768), 9, None, "masks", ".vol")
-    #data.create_mean_rpedc_map(path_c, fovea_coords, (241, 768))
-    path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
-    data.load_ssd(path)
-    data.load_mean_rpedc_map(path)
-    path_data = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\Projekt Sarah\\Macustar\\V1\\testdaten\\MACUSTAR_313-001-0001_R_2018-3-26"
-    data.get_data(path_data, fovea_coords, (241, 768), 9, None, "masks", "rpedc", ".vol")
-    #path_ssd = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\GitLab"
-    #data.save_mean_rpedc_map(path_ssd)
-    #data.load_mean_rpedc_map(path_ssd)
-    
+    pass
 
-# =============================================================================
-#     data.load_ssd(path_ssd,"ssd_2022-05-26.pkl")
-#     path = "E:\\benis\\Documents\\Arbeit\\Arbeit\\Augenklinik\\repo_locs\\process\\IR-registration"
-#     data.get_data(path, fovea_coords, (241, 768), 9, None, None, None, ".vol")
-#     
-#     data.create_excel_sheets( 
-#             path_ssd,
-#             2,
-#             (25, 30),
-#             "Macustar",
-#             )
-# =============================================================================
-    
-    #plt.imshow(data.mean_rpedc_map.octmap["std"])
-    for pat in data.patients:
-        plt.imshow(data.patients[pat].visits[0].octmap["ez"])
     
 
 
