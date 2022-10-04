@@ -10,7 +10,6 @@ import torch
 from torch import full
 from torchvision import transforms
 import matplotlib.pyplot as plt 
-import matplotlib
 import matplotlib.pylab as pl
 from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable

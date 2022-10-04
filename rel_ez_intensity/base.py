@@ -22,7 +22,7 @@ from read_roi import read_roi_zip
 import eyepy as ep
 
 from heyex_tools import vol_reader
-from macustar_predictor import macustar_segmentation_analysis
+from grade_ml_segmentation import macustar_segmentation_analysis
 
 from rel_ez_intensity.getAdjacencyMatrix import plot_layers
 from rel_ez_intensity.seg_core import get_retinal_layers
