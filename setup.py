@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 
 
 #with open("README.rst") as readme_file:
@@ -17,7 +17,7 @@ __version__ = "0.3.3"
 
 requirements = ["eyepie==0.3.7", "numpy>=1.22", "opencv-python", "opencv-python-headless", "Pillow",
     "xlsxwriter", "read-roi","imgaug==0.4.0", "matplotlib==3.5.1", "PyYAML==6.0", "scikit_learn==1.1.1", "scipy==1.8.0",
-    "torch==1.8.1", "torchvision==0.9.1", "tqdm==4.64.0"]
+    "torch==1.8.2", "torchvision==0.9.2", "tqdm==4.64.0"]
 
 setup_requirements = ["pytest-runner"]
 
@@ -38,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.9"
     ],
     description="The Python package to analyse the relative elipsoid zone intensity (relEZI) by oct imaging",
     install_requires=requirements,
