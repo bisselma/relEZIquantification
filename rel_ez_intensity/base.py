@@ -519,7 +519,7 @@ class RelEZIntensity:
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
             try:
-                fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
             except:
                 print("ID %s is missing in Fovea List " % vol_id)
                 continue
