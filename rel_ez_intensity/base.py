@@ -758,7 +758,7 @@ class RelEZIntensity:
 
 
             # laterality 
-            lat = patient.visits[visit -1].laterality
+            lat = patient.visits[visit -2].laterality
 
 
 
@@ -817,7 +817,7 @@ class RelEZIntensity:
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
-            vol_p_pat = np.array(patient.visits[visit-1].fovea_coords).T
+            vol_p_pat = np.array(patient.visits[visit-2].fovea_coords).T
         
             # translation in oct scan filed coordinate system
             vol_t_F = (vol_p_fovea - vol_p_pat)
@@ -901,18 +901,20 @@ class RelEZIntensity:
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
+        df = pd.read_excel(micro_data_path)
+
         for patient in self.patients.values():
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-            vol_file_path=patient.visits[visit -1].volfile_path,
+            vol_file_path=patient.visits[visit -2].volfile_path,
             cache_segmentation=True,
             use_gpu = use_gpu
             )
 
 
             # calculate rel_ez_i_map
-            ez_i_map = cv2.resize(patient.visits[visit -1].octmap["ez"], (768, int(768*(25/30))))
-            elm_i_map = cv2.resize(patient.visits[visit -1].octmap["elm"], (768, int(768*(25/30))))
+            ez_i_map = cv2.resize(patient.visits[visit -2].octmap["ez"], (768, int(768*(25/30))))
+            elm_i_map = cv2.resize(patient.visits[visit -2].octmap["elm"], (768, int(768*(25/30))))
             ez_i_map[np.isnan(ez_i_map)] = 0
             elm_i_map[np.isnan(elm_i_map)] = 0
 
@@ -929,19 +931,19 @@ class RelEZIntensity:
 
 
             # laterality 
-            lat = patient.visits[visit -1].laterality
+            lat = patient.visits[visit -2].laterality
 
 
 
             stimuli_s = ut.get_microperimetry(
-                micro_data_path,
+                df,
                 patient.pid,
                 visit,
                 lat,
                 "S")
 
             stimuli_m = ut.get_microperimetry(
-                micro_data_path,
+                df,
                 patient.pid,
                 visit,
                 lat,
@@ -988,7 +990,7 @@ class RelEZIntensity:
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
-            vol_p_pat = np.array(patient.visits[visit-1].fovea_coords).T
+            vol_p_pat = np.array(patient.visits[visit-2].fovea_coords).T
         
             # translation in oct scan filed coordinate system
             vol_t_F = (vol_p_fovea - vol_p_pat)
