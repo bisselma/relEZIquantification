@@ -738,7 +738,7 @@ class RelEZIntensity:
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
-        for patient in self.patients:
+        for patient in self.patients.values():
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
             vol_file_path=patient.visits[visit -1].volfile_path,
@@ -898,7 +898,7 @@ class RelEZIntensity:
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
-        for patient in self.patients:
+        for patient in self.patients.values():
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
             vol_file_path=patient.visits[visit -1].volfile_path,
