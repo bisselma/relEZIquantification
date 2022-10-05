@@ -16,7 +16,6 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import shift
 from scipy.interpolate import griddata
 import eyepy as ep
-import pandas as pd
 from PIL import Image
 
 
@@ -93,19 +92,17 @@ grid_iamd = {
 
 
 def get_microperimetry(
-        file_path: Union[str, Path, IO] = None,
+        df,
         pid: str = None,
         visit: int = None,
         laterality: str = None,
         mode: str = None):
 
-        
-    df = pd.read_excel(file_path)
     idx = np.where(df["UNIQUE_ID"] == pid + "-V" + str(visit) + "-" + laterality + "-" + mode)[0]
     if len(idx) == 1:
         data = df.loc[idx[0]]
     else:
-        raise ValueError("ID is not in data %s" % file_path)
+        raise ValueError("ID is not in data")
         
     micro = np.array(data[
             np.logical_and(

@@ -18,6 +18,7 @@ import cv2
 import xlsxwriter as xls
 from scipy.ndimage.morphology import binary_dilation
 from read_roi import read_roi_zip
+import pandas as pd
 
 import eyepy as ep
 
@@ -738,10 +739,12 @@ class RelEZIntensity:
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
+        df = pd.read_excel(micro_data_path)
+
         for patient in self.patients.values():
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-            vol_file_path=patient.visits[visit -1].volfile_path,
+            vol_file_path=patient.visits[visit -2].volfile_path,
             cache_segmentation=True,
             use_gpu = use_gpu
             )
@@ -760,14 +763,14 @@ class RelEZIntensity:
 
 
             stimuli_s = ut.get_microperimetry(
-                micro_data_path,
+                df,
                 patient.pid,
                 visit,
                 lat,
                 "S")
 
             stimuli_m = ut.get_microperimetry(
-                micro_data_path,
+                df,
                 patient.pid,
                 visit,
                 lat,
