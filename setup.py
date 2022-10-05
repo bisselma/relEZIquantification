@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 
 
 #with open("README.rst") as readme_file:
@@ -15,7 +15,7 @@ __version__ = "0.3.5"
 #with open("HISTORY.rst") as history_file:
  #   history = history_file.read()
 
-requirements = ["eyepie==0.3.7", "numpy>=1.22", "opencv-python", "opencv-python-headless", "Pillow",
+requirements = ["eyepie==0.3.7", "numpy>=1.22", "opencv-python", "opencv-python-headless", "pillow==9.0.1",
     "xlsxwriter", "read-roi","imgaug==0.4.0", "matplotlib==3.5.1", "PyYAML==6.0", "scikit_learn==1.1.1", "scipy==1.8.0",
     "torch==1.8.1", "torchvision==0.9.1", "tqdm==4.64.0"]
 
