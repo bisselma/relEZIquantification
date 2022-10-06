@@ -817,7 +817,9 @@ class RelEZIntensity:
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            #vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            vol_R = np.array([[1, 0, 0],
+            [0, 1, 0]])
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
@@ -996,7 +998,9 @@ class RelEZIntensity:
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            #vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            vol_R = np.array([[1, 0, 0],
+            [0, 1, 0]])
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
