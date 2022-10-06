@@ -1466,7 +1466,7 @@ class RelEZIntensity:
             
         row = 1
         
-        if project == "macutar micro":
+        if project == "macustar micro":
             for i, ids in enumerate(self.patients.keys()):
             
                 for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
