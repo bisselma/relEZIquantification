@@ -743,7 +743,7 @@ class RelEZIntensity:
 
         for i in range(len(self.patients.keys())):
 
-            keys = self.patients.keys()[i]
+            keys = list(self.patients.keys())[i]
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
             vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
