@@ -854,8 +854,8 @@ class RelEZIntensity:
 
 
             # calculate affine transformation matrix A
-            H_m = ut.get2DAffineTransformationMartix_by_SuperRetina(img1_m, slo_img)
-            H_s = ut.get2DAffineTransformationMartix_by_SuperRetina(img1_s, slo_img)
+            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_m, slo_img)
+            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_s, slo_img)
         
 
             # transform grid
