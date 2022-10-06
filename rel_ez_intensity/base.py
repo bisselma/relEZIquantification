@@ -817,9 +817,7 @@ class RelEZIntensity:
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            #vol_R = ut.get2DRigidTransformationMatrix(q, p)
-            vol_R = np.array([[1, 0, 0],
-            [0, 1, 0]])
+            vol_R = ut.get2DRigidTransformationMatrix(q, p)
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
@@ -998,9 +996,7 @@ class RelEZIntensity:
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            #vol_R = ut.get2DRigidTransformationMatrix(q, p)
-            vol_R = np.array([[1, 0, 0],
-            [0, 1, 0]])
+            vol_R = ut.get2DRigidTransformationMatrix(q, p)
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
@@ -1041,8 +1037,8 @@ class RelEZIntensity:
 
 
             # calculate affine transformation matrix A
-            H_m = ut.get2DAffineTransformationMartix_by_SuperRetina(slo_img, img1_m)
-            H_s = ut.get2DAffineTransformationMartix_by_SuperRetina(slo_img, img1_s)
+            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
+            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
         
 
             # transform grid
