@@ -741,7 +741,9 @@ class RelEZIntensity:
 
         df = pd.read_excel(micro_data_path)
 
-        for i in range(len(self.patients.keys())):
+        key_list_num = np.copy(len(self.patients.keys()))
+
+        for i in range(key_list_num):
 
             keys = list(self.patients.keys())[i]
             # read vol by macustarpredicter
@@ -906,7 +908,9 @@ class RelEZIntensity:
 
         df = pd.read_excel(micro_data_path)
 
-        for i in range(len(self.patients.keys())):
+        key_list_num = np.copy(len(self.patients.keys()))
+
+        for i in range(key_list_num):
 
             keys = list(self.patients.keys())[i]
 
