@@ -807,7 +807,7 @@ class RelEZIntensity:
                 
                 # Coordinates are mirrored on the x-axis
                 q = np.array([
-                    [768 - grid[-1,0],768 - grid[-1,2]],
+                    [768 - grid[-1,2],768 - grid[-1,0]],
                     [grid[-1,3], grid[-1,1]]
                     ])                
 
