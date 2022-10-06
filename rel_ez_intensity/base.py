@@ -741,7 +741,9 @@ class RelEZIntensity:
 
         df = pd.read_excel(micro_data_path)
 
-        for keys in self.patients.keys():
+        for i in range(len(self.patients.keys())):
+
+            keys = self.patients.keys()[i]
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
             vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
@@ -904,7 +906,10 @@ class RelEZIntensity:
 
         df = pd.read_excel(micro_data_path)
 
-        for keys in self.patients.keys():
+        for i in range(len(self.patients.keys())):
+
+            keys = self.patients.keys()[i]
+            
             # read vol by macustarpredicter
             analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
             vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
