@@ -508,7 +508,7 @@ def show_grid_over_relEZIMap(
     
     # calculate transformed intensity map
     w, h = rel_ez_i_map_ill.shape  
-    rel_ez_i_map_ill = cv2.warpAffine(rel_ez_i_map_ill,H_matrix, (w, h))
+    rel_ez_i_map_ill = cv2.warpPerspective(rel_ez_i_map_ill,H_matrix, (w, h), borderMode=cv2.BORDER_CONSTANT, borderValue=(0))
 
 
     rads = np.arange(0,360,20) *  np.pi / 180
