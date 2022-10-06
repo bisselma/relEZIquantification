@@ -890,10 +890,11 @@ class RelEZIntensity:
                 
 
             
-            patient.visit.octmap["micro_mask_m"] = mask_iamd_m
-            patient.visit.octmap["micro_mask_s"] = mask_iamd_s
-            patient.visit.octmap["micro_stim_m"] = stimuli_m_map
-            patient.visit.octmap["micro_stim_s"] = stimuli_s_map
+            patient.visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
+            patient.visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
+            patient.visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
+            patient.visits[visit -2].octmap["micro_stim_s"] = stimuli_s_map
+
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
