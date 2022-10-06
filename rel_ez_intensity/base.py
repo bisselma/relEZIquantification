@@ -712,7 +712,7 @@ class RelEZIntensity:
                 self.scan_size,
                 self.stackwidth,
                 lat,
-                (fovea_bscan, fovea_ascan),
+                (fovea_ascan, fovea_bscan), # (x,y)
                 maps_data
             )            
     
