@@ -894,10 +894,10 @@ class RelEZIntensity:
                 
 
             
-            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
-            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
-            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
-            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = stimuli_s_map
+            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = cv2.resize(mask_iamd_m,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
+            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = cv2.resize(mask_iamd_s,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
+            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = cv2.resize(stimuli_m_map,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
+            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = cv2.resize(stimuli_s_map,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
 
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
@@ -990,7 +990,7 @@ class RelEZIntensity:
                 
                 # Coordinates are mirrored on the x-axis
                 q = np.array([
-                    [768 - grid[-1,0],768 - grid[-1,2]],
+                    [768 - grid[-1,2],768 - grid[-1,0]],
                     [grid[-1,3], grid[-1,1]]
                     ])                
 
