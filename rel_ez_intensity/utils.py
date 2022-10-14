@@ -30,7 +30,7 @@ use_matching_trick = True
 
 nms_size = 10
 nms_thresh = 0.01
-knn_thresh = 0.5
+knn_thresh = 0.9
 
 # modul load
 device = "cuda:0"
