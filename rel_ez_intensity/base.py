@@ -766,7 +766,7 @@ class RelEZIntensity:
     def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
 
         if len(self.patients) == 0:
-            raise Exception("So far, no patients have been analyzed, please first use calculate_relEZI_maps()")
+            raise Exception("So far, no patient has been analyzed, please first use calculate_relEZI_maps()")
 
         ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
 
@@ -910,14 +910,14 @@ class RelEZIntensity:
 
 
             # create binary image with iamd grid 
-            mask_iamd_m = np.zeros_like(slo_img)
-            mask_iamd_s = np.zeros_like(slo_img)
-            stimuli_m_map = np.zeros_like(slo_img)
-            stimuli_s_map = np.zeros_like(slo_img)
+            mask_iamd_m = np.zeros_like((self.scan_size[0],self.scan_size[1]))
+            mask_iamd_s = np.zeros_like(mask_iamd_m)
+            stimuli_m_map = np.zeros_like(mask_iamd_m)
+            stimuli_s_map = np.zeros_like(mask_iamd_m)
 
             yy,xx = np.mgrid[:slo_img.shape[0], :slo_img.shape[1]]
 
-            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m, x_new_m, y_new_s, x_new_s):
+            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m // self.scan_size[0], x_new_m // self.stackwidth, y_new_s // self.scan_size[0], x_new_s // self.stackwidth):
                 mask_iamd_m[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = num 
                 mask_iamd_s[((yy - y_cur_s) ** 2) + ((xx - x_cur_s)**2) < radius ** 2] = num 
                 stimuli_m_map[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = stil_m
@@ -925,10 +925,10 @@ class RelEZIntensity:
                 
 
             
-            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = cv2.resize(mask_iamd_m,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
-            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = cv2.resize(mask_iamd_s,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
-            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = cv2.resize(stimuli_m_map,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
-            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = cv2.resize(stimuli_s_map,(self.scan_size[0],self.scan_size[1] // self.stackwidth))
+            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
+            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
+            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
+            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = stimuli_s_map
 
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
