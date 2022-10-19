@@ -914,7 +914,7 @@ class RelEZIntensity:
             stimuli_m_map = np.zeros_like(mask_iamd_m)
             stimuli_s_map = np.zeros_like(mask_iamd_m)
 
-            yy,xx = np.mgrid[np.linspace(0,25,241),np.linspace(0,30,self.stackwidth)]
+            yy,xx = np.mgrid[np.linspace(0,25,241),np.linspace(0,30,768 // self.stackwidth)]
 
             for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m // self.scan_size[0], x_new_m , y_new_s // self.scan_size[0], x_new_s // self.stackwidth):
                 mask_iamd_m[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = num 
