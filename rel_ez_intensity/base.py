@@ -725,8 +725,8 @@ class RelEZIntensity:
             # create Map Objects containing the created maps
             if self.project == "macustar": 
                 current_map = OCTMap(
-                    "REZI-Map",
                     None,
+                    "REZI-Map",
                     data_dict[vol_id],
                     vol_data._meta["VisitDate"],
                     self.scan_size,
@@ -737,8 +737,8 @@ class RelEZIntensity:
                 )            
             elif self.project == "mactel": 
                 current_map = OCTMap(
-                    "REZI-Map",
                     vids[vol_id],
+                    "REZI-Map",
                     data_dict[vol_id],
                     vol_data._meta["VisitDate"],
                     self.scan_size,
