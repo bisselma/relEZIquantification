@@ -147,6 +147,43 @@ def get_id_by_file_path(
     ) -> Optional[str]:
     return file_path.split("\\")[-1].split(".")[0]
 
+def get_list_by_format(
+    folder_path: Union[str, Path, IO] = None,
+    formats: Optional[tuple] = None,
+    ) -> Optional[Dict]:
+
+    if not os.path.exists(folder_path):
+        raise NotADirectoryError("directory: " +  folder_path + " not exist")
+
+
+    return_list = {}
+
+    if formats:
+        for tmp_format in list(formats):
+            
+            if tmp_format == ".vol":
+                dir_list = os.listdir(folder_path)
+                tmp_dict = {}          
+                for dir in dir_list:               
+                    full_path = os.path.join(folder_path, dir)
+                    if os.path.isdir(full_path):
+                        dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+                    if os.path.isfile(full_path) and full_path.endswith(tmp_format):
+                        tmp_dict[full_path.split("\\")[-2].split("_")[1][4:]] = full_path                      
+                return_list[tmp_format] = tmp_dict
+            else:
+                dir_list = os.listdir(folder_path)
+                tmp_list = []
+                for dir in dir_list:               
+                    full_path = os.path.join(folder_path, dir)
+                    if os.path.isdir(full_path):
+                        dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+                    if os.path.isfile(full_path) and full_path.endswith(tmp_format):
+                        tmp_list.append(full_path)                     
+                return_list[tmp_format] = tmp_list               
+            
+    return return_list
+
 def get_vol_list(
     folder_path: Union[str, Path, IO] = None,
     project: str = None
