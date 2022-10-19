@@ -910,7 +910,7 @@ class RelEZIntensity:
 
 
             # create binary image with iamd grid 
-            mask_iamd_m = np.zeros((self.scan_size[0],self.scan_size[1]) // self.stackwidth)
+            mask_iamd_m = np.zeros((self.scan_size[0],self.scan_size[1] // self.stackwidth))
             mask_iamd_s = np.zeros_like(mask_iamd_m)
             stimuli_m_map = np.zeros_like(mask_iamd_m)
             stimuli_s_map = np.zeros_like(mask_iamd_m)
