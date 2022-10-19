@@ -902,12 +902,11 @@ class RelEZIntensity:
             grid_coords_transf_m = H_m @ grid_coords
             grid_coords_transf_s = H_s @ grid_coords
 
-            x_new_m = grid_coords_transf_m[0,:]
-            y_new_m = grid_coords_transf_m[1,:]
+            x_new_m = (grid_coords_transf_m[0,:] * (30/ 768)) 
+            y_new_m = ((grid_coords_transf_m[1,:] - 64) * (25 / 640))
 
-            x_new_s = grid_coords_transf_s[0,:]
-            y_new_s = grid_coords_transf_s[1,:]
-
+            x_new_s = (grid_coords_transf_s[0,:] * (30/ 768))
+            y_new_s = ((grid_coords_transf_s[1,:] - 64) * (25 / 640))
 
             # create binary image with iamd grid 
             mask_iamd_m = np.zeros((self.scan_size[0],self.scan_size[1] // self.stackwidth))
@@ -915,9 +914,9 @@ class RelEZIntensity:
             stimuli_m_map = np.zeros_like(mask_iamd_m)
             stimuli_s_map = np.zeros_like(mask_iamd_m)
 
-            yy,xx = np.mgrid[:self.scan_size[0], :self.scan_size[1] // self.stackwidth]
+            yy,xx = np.mgrid[np.linspace(0,25,241),np.linspace(0,30,self.stackwidth)]
 
-            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m // self.scan_size[0], x_new_m // self.stackwidth, y_new_s // self.scan_size[0], x_new_s // self.stackwidth):
+            for num, stil_s, stil_m, y_cur_m, x_cur_m, y_cur_s, x_cur_s in zip(np.arange(1,34,1), stimuli_s, stimuli_m, y_new_m // self.scan_size[0], x_new_m , y_new_s // self.scan_size[0], x_new_s // self.stackwidth):
                 mask_iamd_m[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = num 
                 mask_iamd_s[((yy - y_cur_s) ** 2) + ((xx - x_cur_s)**2) < radius ** 2] = num 
                 stimuli_m_map[((yy - y_cur_m) ** 2) + ((xx - x_cur_m)**2) < radius ** 2] = stil_m
