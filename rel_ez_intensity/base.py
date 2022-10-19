@@ -35,7 +35,8 @@ class OCTMap:
 
     def __init__(
             self,
-            name: str,
+            vid: Optional[int] = None,
+            name: str = None,
             volfile_path: Union[str, Path, IO] = None, 
             date_of_origin: Optional[date] = None, # if REZI-Map the day of recording is stored
             scan_size: Optional[tuple] = None,
@@ -44,6 +45,7 @@ class OCTMap:
             fovea_coords: Optional[tuple] = None,
             octmap: Optional[Dict] = None,
             ) -> None:
+        self.vid = vid
         self.name = name
         self.volfile_path = volfile_path
         self.date_of_origin = date_of_origin
@@ -119,6 +121,7 @@ class RelEZIntensity:
     
     def __init__(
             self,
+            project: Optional[str] = None,
             fovea_coords: Optional[Dict] = None,
             ez_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
             elm_distance_map: Optional[OCTMap] = None, # [mean distance, standard diviation]
@@ -128,6 +131,7 @@ class RelEZIntensity:
             base_layer: Optional[str] = None
             
             ) -> None:
+        self.project = project
         self.fovea_coords = fovea_coords
         self.ez_distance_map = ez_distance_map
         self.elm_distance_map = elm_distance_map
@@ -400,6 +404,7 @@ class RelEZIntensity:
     def calculate_relEZI_maps(
         self,
         folder_path: Union[str, Path, IO] = None,
+        project: Optional[str] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
@@ -411,7 +416,8 @@ class RelEZIntensity:
 
         """
         Args:
-            folder_path (Union[str, Path, IO]): folder path where files are storedB
+            folder_path (Union[str, Path, IO]): folder path where files are stored
+            project (Optional[str]): project name 
             fovea_coords (Optional[Dict]): location of fovea
                 !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
                 bscan (int): Number of B-scan including fovea
@@ -423,10 +429,16 @@ class RelEZIntensity:
             ref_layer (Optional[str]): layer to flatten the image 
             base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
-                                            # if values (boolean) are True the area should not be analysed. But if oly one value is False the area will be analysed
+                                            # if values (boolean) are True the area should not be analysed.
             *args: file formats that contain the data
+ 
+ 
         """
-        
+        if not project:
+            project = self.project
+        else:
+            self.project = project
+
         if not fovea_coords:
             fovea_coords = self.fovea_coords
         else:
@@ -464,7 +476,10 @@ class RelEZIntensity:
 
         # data directories
         if args:
-            data_dict = ut.get_list_by_format(folder_path, args)
+            if self.project == "macustar":
+                data_dict, _ = ut.get_vol_list(folder_path, self.project)
+            elif self.project == "mactel":
+                data_dict, vids = ut.get_vol_list(folder_path, self.project)
         else:
             raise ValueError("no file format given")
 
@@ -476,6 +491,9 @@ class RelEZIntensity:
                 ae_dict_1 = ut.get_rpedc_list(folder_path)
             if "rpd" in self.area_exclusion.keys():
                 ae_dict_2 = ut.get_rpd_list(folder_path)
+            if "ez_loss" in self.area_exclusion.keys():
+                pass
+            ###########################
         else: 
             for area_ex in self.area_exclusion.keys():
                 if area_ex == "rpedc":
@@ -491,7 +509,7 @@ class RelEZIntensity:
 
 
         # iterate  over .vol-list
-        for vol_id in data_dict[".vol"]:
+        for vol_id in data_dict:
 
             # current distance map
             curr_ez_intensity = np.zeros((scan_size[0], nos))
@@ -500,12 +518,12 @@ class RelEZIntensity:
             
             
             # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(data_dict[".vol"][vol_id])
+            vol_data = ep.Oct.from_heyex_vol(data_dict[vol_id])
 
             
             # check if given number of b scans match with pre-defined number 
             if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[".vol"][vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
                 continue
             
             
@@ -704,18 +722,31 @@ class RelEZIntensity:
                 maps_data["rpd"] = np.logical_or(curr_excluded == 3, curr_excluded == 4)
           
             
-            # create Map Objects containing the created maps 
-            current_map = OCTMap(
-                "REZI-Map",
-                data_dict[".vol"][vol_id],
-                vol_data._meta["VisitDate"],
-                self.scan_size,
-                self.stackwidth,
-                lat,
-                (fovea_ascan, fovea_bscan), # (x,y)
-                maps_data
-            )            
-    
+            # create Map Objects containing the created maps
+            if self.project == "macustar": 
+                current_map = OCTMap(
+                    "REZI-Map",
+                    None,
+                    data_dict[vol_id],
+                    vol_data._meta["VisitDate"],
+                    self.scan_size,
+                    self.stackwidth,
+                    lat,
+                    (fovea_ascan, fovea_bscan), # (x,y)
+                    maps_data
+                )            
+            elif self.project == "mactel": 
+                current_map = OCTMap(
+                    "REZI-Map",
+                    vids[vol_id],
+                    data_dict[vol_id],
+                    vol_data._meta["VisitDate"],
+                    self.scan_size,
+                    self.stackwidth,
+                    lat,
+                    (fovea_ascan, fovea_bscan), # (x,y)
+                    maps_data
+                )       
         
             if vol_id in self.patients.keys():
                 
