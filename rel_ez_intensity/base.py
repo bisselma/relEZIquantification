@@ -920,7 +920,7 @@ class RelEZIntensity:
             xx = xx * (30/(768 // self.stackwidth))
             yy = yy * (25/241
             )
-            for idx in range(34):            
+            for idx in range(33):            
                 mask_iamd_m[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = i 
                 mask_iamd_s[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) < radius ** 2] = i 
                 stimuli_m_map[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = stimuli_m[idx]
