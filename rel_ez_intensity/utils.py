@@ -494,7 +494,7 @@ def interpolate_grid(x,y,z,w,h, point_radius):
 
 
 def show_grid_over_relEZIMap(
-    slo_img,
+    img,
     rel_ez_i_map,
     x,
     y,
@@ -510,7 +510,7 @@ def show_grid_over_relEZIMap(
     ):
     
     # create rel_ezi heatmap illustration image
-    rel_ez_i_map_ill = np.zeros_like(slo_img)
+    rel_ez_i_map_ill = np.zeros_like(img)
     rel_ez_i_map_ill[64:-64, :] = rel_ez_i_map
     
     # calculate transformed intensity map
@@ -529,7 +529,7 @@ def show_grid_over_relEZIMap(
 
 
     # radius according to Goldmann III 0.43° diameter
-    radius = (slo_img.shape[0]/30) * (0.43/2)
+    radius = (img.shape[0]/30) * (0.43/2)
 
     rel_EZI = np.array([sample_circle(x_i,y_i, radius, rel_ez_i_map_ill, 0.8) for x_i, y_i in zip(x_ill,y_ill)])
 
@@ -546,12 +546,12 @@ def show_grid_over_relEZIMap(
                     x= x_ill,
                     y= y_ill,
                     z= rel_EZI,
-                    w = slo_img.shape[1],
-                    h = slo_img.shape[0],
+                    w = img.shape[1],
+                    h = img.shape[0],
                     point_radius=0
                     )
 
-    plt.imshow(slo_img, cmap="gray")
+    plt.imshow(img, cmap="gray")
     plt.imshow(int_grid, cmap = "RdYlGn", alpha=0.5, vmax= 4)
     im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=-30, vmax=0.5 * np.nanmax(stimuli))
     for i, val in enumerate(stimuli):
