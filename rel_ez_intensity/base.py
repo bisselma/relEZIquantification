@@ -1075,26 +1075,11 @@ class RelEZIntensity:
             H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
         
 
-            # transform grid
-            grid_coords = np.zeros((3,len(x)))
-            grid_coords[0,:] = x
-            grid_coords[1,:] = y
-            grid_coords[2,:] = np.ones((1,len(x)))
-
-            grid_coords_transf_m = H_m @ grid_coords
-            grid_coords_transf_s = H_s @ grid_coords
-
-            x_new_m = grid_coords_transf_m[0,:]
-            y_new_m = grid_coords_transf_m[1,:]
-
-            x_new_s = grid_coords_transf_s[0,:]
-            y_new_s = grid_coords_transf_s[1,:]
-
             ut.show_grid_over_relEZIMap(
-                slo_img,
+                img1_m,
                 rel_ez_i_map,
-                x_new_m,
-                y_new_m,
+                x,
+                y,
                 (slo_img.shape[0]//2,slo_img.shape[1]//2),
                 stimuli_m,
                 H_m,
@@ -1107,10 +1092,10 @@ class RelEZIntensity:
                 )
 
             ut.show_grid_over_relEZIMap(
-                slo_img,
+                img1_s,
                 rel_ez_i_map,
-                x_new_s,
-                y_new_s,
+                x,
+                y,
                 (slo_img.shape[0]//2,slo_img.shape[1]//2),
                 stimuli_s,
                 H_s,
