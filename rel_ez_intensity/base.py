@@ -1092,7 +1092,7 @@ class RelEZIntensity:
                 )
 
             ut.show_grid_over_relEZIMap(
-                slo_img,
+                img1_s,
                 rel_ez_i_map,
                 x,
                 y,
