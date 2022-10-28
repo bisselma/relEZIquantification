@@ -4,6 +4,7 @@ from timeit import repeat
 from typing import Callable, Dict, List, Optional, Union, IO
 from unicodedata import name
 from weakref import ref
+from itsdangerous import NoneAlgorithm
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -1325,6 +1326,7 @@ class RelEZIntensity:
         
         # create Map Objects containing the created maps 
         self.ez_distance_map = OCTMap(
+            None, # no visit id
             "rpe_ez",
             date.today(),
             self.scan_size,
@@ -1336,6 +1338,7 @@ class RelEZIntensity:
             }
             )
         self.elm_distance_map = OCTMap(
+            None, # no visit id
             "rpe_elm",
             date.today(),
             self.scan_size,
@@ -1424,6 +1427,7 @@ class RelEZIntensity:
         rpedc_thickness[rpedc_thickness <= 0.1] = np.nan # invalid values are set to nan
         
         self.mean_rpedc_map = OCTMap(
+            None, # no visit id 
             "mean_rpedc",
             date.today(),
             self.scan_size,
