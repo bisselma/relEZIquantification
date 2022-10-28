@@ -229,7 +229,7 @@ def get_flatten_seg(path: Optional[Layer] = None):
 
     """ 
     del_idx = [0, len(path.layerX) -1] # get rid of frame 
-    for idx in range(1,len(path.layerX - 2)):
+    for idx in range(1,len(path.layerX) -2):
         if path.layerX[idx] == path.layerX[idx+1]:
            del_idx.append(idx)
            
