@@ -1319,8 +1319,7 @@ class RelEZIntensity:
         elm_std = np.nanstd(elm_distance, axis=0)
         elm_std[elm_std == np.nan] = 0.
         elm_dist = np.nanmean(elm_distance, axis=0)
-        elm_dist[elm_dist == np.nan] = 0.       
-        
+        elm_dist[elm_dist == np.nan] = 0.    
         # create Map Objects containing the created maps 
         self.ez_distance_map = OCTMap(
             None, # no visit id
@@ -1329,7 +1328,8 @@ class RelEZIntensity:
             date.today(),
             self.scan_size,
             self.stackwidth,
-            None, 
+            None,
+            None,
             {
             "distance" : ez_dist,
             "std"      : ez_std
@@ -1343,6 +1343,7 @@ class RelEZIntensity:
             self.scan_size,
             self.stackwidth,
             None, 
+            None,
             {
             "distance" : elm_dist,
             "std"      : elm_std
@@ -1433,6 +1434,7 @@ class RelEZIntensity:
             self.scan_size,
             self.stackwidth,
             None, 
+            None,
             {
             "mean" : np.nanmean(rpedc_thickness, axis=0),
             "std"      : np.nanstd(rpedc_thickness, axis=0)
