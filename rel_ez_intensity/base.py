@@ -1325,6 +1325,7 @@ class RelEZIntensity:
         self.ez_distance_map = OCTMap(
             None, # no visit id
             "rpe_ez",
+            None, # path
             date.today(),
             self.scan_size,
             self.stackwidth,
@@ -1337,6 +1338,7 @@ class RelEZIntensity:
         self.elm_distance_map = OCTMap(
             None, # no visit id
             "rpe_elm",
+            None, # path
             date.today(),
             self.scan_size,
             self.stackwidth,
@@ -1426,6 +1428,7 @@ class RelEZIntensity:
         self.mean_rpedc_map = OCTMap(
             None, # no visit id 
             "mean_rpedc",
+            None, # path
             date.today(),
             self.scan_size,
             self.stackwidth,
