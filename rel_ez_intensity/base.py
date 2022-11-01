@@ -1243,8 +1243,8 @@ class RelEZIntensity:
                     rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
                     seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
 
-                    rpe_peak = np.where(np.nanmean(rpe_roi,1) == np.nanmax(np.nanmean(rpe_roi,1)))[0]
-                    if len(rpe_peak) >= 1:
+                    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+                    if len(rpe_peak) == 1:
                         rpe_peak = rpe_peak[0]
                     else:
                         rpe_peak = None
@@ -1253,8 +1253,8 @@ class RelEZIntensity:
                     ez_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
                     ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
 
-                    ez_peak = np.where(np.nanmean(ez_roi,1) == np.nanmax(np.nanmean(ez_roi,1)))[0]
-                    if len(ez_peak) >= 1:
+                    ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
+                    if len(ez_peak) == 1:
                         ez_peak = ez_peak[0]
                     else:
                         ez_peak = None
@@ -1262,9 +1262,9 @@ class RelEZIntensity:
         
                     elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
                     elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7] = np.nan
-                    
-                    elm_peak = np.where(np.nanmean(elm_roi,1) == np.nanmax(np.nanmean(elm_roi,1)))[0]
-                    if len(elm_peak) >= 1:
+
+                    elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
+                    if len(elm_peak) == 1:
                         elm_peak = elm_peak[0]
                     else:
                         elm_peak = None                    
@@ -1275,12 +1275,12 @@ class RelEZIntensity:
                         #             elm_peak, i_profile[elm_peak], "x")
                         
 
-                        # set distances
-                        if rpe_peak:
-                            if ez_peak:
-                                ez[start_w + i] = rpe_peak - ez_peak
-                            if elm_peak:
-                                elm[start_w + i] = rpe_peak - elm_peak
+                    # set distances
+                    if rpe_peak:
+                        if ez_peak:
+                            ez[start_w + i] = rpe_peak - ez_peak
+                        if elm_peak:
+                            elm[start_w + i] = rpe_peak - elm_peak
 
 
             ez_distance = np.append(ez_distance, curr_ez_distance, axis=0)
