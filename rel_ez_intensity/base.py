@@ -1240,7 +1240,7 @@ class RelEZIntensity:
                 for i in range(n_st):
 
                     rpe_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
-                    rpe_roi[seg_mask != 10] = np.nan
+                    rpe_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10] = np.nan
 
                     rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
                     if len(rpe_peak) == 1:
@@ -1250,7 +1250,7 @@ class RelEZIntensity:
 
 
                     ez_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
-                    ez_roi[seg_mask != 8] = np.nan
+                    ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
 
                     ez_peak = find_peaks(np.nanmean(ez_roi),1)[0]
                     if len(ez_peak) == 1:
@@ -1260,7 +1260,7 @@ class RelEZIntensity:
                     
         
                     elm_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
-                    elm_roi[seg_mask != 7] = np.nan
+                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7] = np.nan
 
                     elm_peak = find_peaks(np.nanmean(elm_roi),1)[0]
                     if len(elm_peak) == 1:
