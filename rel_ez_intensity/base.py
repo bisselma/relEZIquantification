@@ -1245,7 +1245,7 @@ class RelEZIntensity:
 
                     rpe_peak = np.where(np.nanmean(rpe_roi,1) == np.nanmax(np.nanmean(rpe_roi,1)))[0]
                     if len(rpe_peak) >= 1:
-                        rpe_peak = rpe_peak
+                        rpe_peak = rpe_peak[0]
                     else:
                         rpe_peak = None
 
