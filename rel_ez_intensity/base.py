@@ -1244,9 +1244,7 @@ class RelEZIntensity:
                     seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
 
                     rpe_peak = np.nanmax(np.nanmean(rpe_roi,1))
-                    if len(rpe_peak) == 1:
-                        rpe_peak = rpe_peak[0]
-                    else:
+                    if not rpe_peak:
                         rpe_peak = None
 
 
@@ -1254,9 +1252,7 @@ class RelEZIntensity:
                     ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
 
                     ez_peak = np.nanmax(np.nanmean(ez_roi,1))
-                    if len(ez_peak) == 1:
-                        ez_peak = ez_peak[0]
-                    else:
+                    if not ez_peak:
                         ez_peak = None
                     
         
@@ -1264,9 +1260,7 @@ class RelEZIntensity:
                     elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7] = np.nan
 
                     elm_peak = np.nanmax(np.nanmean(elm_roi,1))
-                    if len(elm_peak) == 1:
-                        elm_peak = elm_peak[-1]
-                    else:
+                    if not elm_peak:
                         elm_peak = None                    
                             
                         #plt.plot(np.arange(len(i_profile)), i_profile,
