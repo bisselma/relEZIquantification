@@ -1228,8 +1228,8 @@ class RelEZIntensity:
                 
                 
                 # create raw_roi and seg_mask_roi
-                raw_roi = np.full((50,scan_size[1]), np.nan)
-                seg_mask_roi = np.full((50,scan_size[1]), np.nan)
+                raw_roi = np.full((53,scan_size[1]), np.nan)
+                seg_mask_roi = np.full((53,scan_size[1]), np.nan)
                 for col_idx in range(scan_size[1]):
                     idxs_ref = np.where(seg_mask[:, col_idx] == ref_layer)[0]
                     if len(idxs_ref) > 0:
