@@ -1240,7 +1240,8 @@ class RelEZIntensity:
                 for i in range(n_st):
 
                     rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    rpe_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10] = np.nan
+                    rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
+                    seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
 
                     rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
                     if len(rpe_peak) == 1:
@@ -1264,7 +1265,7 @@ class RelEZIntensity:
 
                     elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
                     if len(elm_peak) == 1:
-                        elm_peak = elm_peak[0]
+                        elm_peak = elm_peak[-1]
                     else:
                         elm_peak = None                    
                             
