@@ -1168,7 +1168,7 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_id in data_dict:
+        for vol_id in data_dict.values():
 
             # current distance map
             curr_ez_distance = np.empty((1, scan_size[0], nos))
