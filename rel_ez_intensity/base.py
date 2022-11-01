@@ -428,7 +428,7 @@ class RelEZIntensity:
             base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
                                             # if values (boolean) are True the area should not be analysed.
-            *args: file formats that contain the data
+            *args: project
  
  
         """
@@ -479,7 +479,7 @@ class RelEZIntensity:
             elif self.project == "mactel":
                 data_dict, vids = ut.get_vol_list(folder_path, self.project)
         else:
-            raise ValueError("no file format given")
+            raise ValueError("no project name is given")
 
         if base_layer == "masks":
             mask_dict = ut.get_mask_list(folder_path)
@@ -1112,8 +1112,7 @@ class RelEZIntensity:
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        base_layer: Optional[str] = None,
-        *args
+        project: Optional[str] = None
     ) -> None:
 
         """
@@ -1128,9 +1127,6 @@ class RelEZIntensity:
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
-            base_layer (Optional[str]): pre segmented layer 
-                "masks": if segmentation mask is used
-                "vol": if segmentation by .vol-file is used
             *args: file formats that contain the data
         """
         
@@ -1147,26 +1143,21 @@ class RelEZIntensity:
         else:
             self.stackwidth = stackwidth
         if not ref_layer:
-            ref_layer = "BM"
-        if not base_layer:
-            if not self.base_layer:
-                base_layer = self.base_layer = "vol"
-            else:
-                base_layer = self.base_layer
+            ref_layer = "CHO"
         else:
-            self.base_layer = base_layer
+            if ref_layer == "RPE":
+                ref_layer = 10
+            elif ref_layer == "BM":
+                ref_layer = 11
+            else:
+                raise ValueError("layer name for reference layer not vaild")
+
 
 
         # data directories
-        if args:
-            data_dict = ut.get_list_by_format(folder_path, args)
-        else:
-            raise ValueError("no file format given")
+        data_dict = ut.get_vol_list(folder_path, project)
 
-        if base_layer == "masks":
-            mask_dict = ut.get_mask_list(folder_path)
 
-        
         # central bscan/ascan, number of stacks (nos)
         c_bscan = scan_size[0] // 2 + scan_size[0] % 2
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
@@ -1177,37 +1168,38 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_id in data_dict[".vol"]:
+        for vol_id in data_dict:
 
             # current distance map
             curr_ez_distance = np.empty((1, scan_size[0], nos))
             curr_ez_distance[:] = np.nan
             curr_elm_distance = np.full_like(curr_ez_distance, np.nan)
             
-            # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(data_dict[".vol"][vol_id])
-
+            
+            # get data
+            ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+                vol_file_path=data_dict[vol_id],
+                model_file_path=None,
+                use_gpu=True,
+                cuda_device=0,
+                normalize_mean=0.5,
+                normalize_std=0.25,
+                cache_segmentation=True
+)
 
             # check if given number of b scans match with pre-defined number 
-            if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[".vol"][vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
+            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
-            # check if mask dict contains vol id
-            if base_layer == "masks":
-                if vol_id in mask_dict.keys():
-                    mask_list = mask_dict[vol_id]
-                else:
-                    print("ID: %s considered segmentation mask not exist" % vol_id)
-
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[vol_id])]
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
 
             # laterality 
-            lat = vol_data._meta["ScanPosition"]
+            lat = ms_analysis._vol_file.header.scan_position
 
             if lat == "OS": # if left eye is processed
                 fovea_ascan = scan_size[1] - fovea_ascan
@@ -1215,28 +1207,17 @@ class RelEZIntensity:
                 fovea_ascan = fovea_ascan -1
 
             d_bscan  = c_bscan - fovea_bscan
-
-
-            for bscan, ez, elm, idx in zip(
-                vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
+            
+            for bscan, seg_mask, ez, elm in zip(
+                ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
+                ms_analysis.classes[::-1,...][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0]))
                 ):
                 
-
-                if self.base_layer == None or self.base_layer == "vol":
-                    try:
-                        layer = bscan.layers[ref_layer].astype(np.uint16)
-                    except:
-                        continue
-                if self.base_layer == "masks":
-                    layer = ut.get_seg_by_mask(mask_list[idx], 10)
-                
-                bscan_data = bscan._scan_raw
                 if lat == "OS":
-                    bscan_data = np.flip(bscan_data,1)
-                    layer = np.flip(layer)
+                    bscan = np.flip(bscan,1)
+                    seg_mask = np.flip(seg_mask)
                 
                 # get start position to read data
                 d_ascan = c_ascan - fovea_ascan
@@ -1246,57 +1227,53 @@ class RelEZIntensity:
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
                 
-                # create region of interest image 
-                roi = np.zeros((50,scan_size[1])).astype(np.float32)
+                # create raw_roi and seg_mask_roi
+                raw_roi = np.full((50,scan_size[1]), np.nan)
+                seg_mask_roi = np.full((50,scan_size[1]), np.nan)
+                for col_idx in range(scan_size[1]):
+                    idxs_ref = np.where(seg_mask[:, col_idx] == ref_layer)[0]
+                    if len(idxs_ref) > 0:
+                        raw_roi[:, col_idx] = bscan[idxs_ref[0] -48: idxs_ref[0] +2: col_idx]
+                        seg_mask_roi[:, col_idx] = seg_mask[idxs_ref[0] -48: idxs_ref[0] +2: col_idx]
                 
-                for i, l in enumerate(layer):
-                    if l < 496 and l > 0:
-                        roi[:,i] = bscan_data[l-40:l+10,i]
-                        
-            
-                # get ez and rpe boundary 
-                imglayers = get_retinal_layers(roi) 
-                
-                #if idx == 123:
-                 #   plot_layers(roi, imglayers)
-                
-                
+
                 for i in range(n_st):
+
+                    rpe_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
+                    rpe_roi[seg_mask != 10] = np.nan
+
+                    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+                    if len(rpe_peak) == 1:
+                        rpe_peak = rpe_peak[0]
+                    else:
+                        rpe_peak = None
+
+
+                    ez_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
+                    ez_roi[seg_mask != 8] = np.nan
+
+                    ez_peak = find_peaks(np.nanmean(ez_roi),1)[0]
+                    if len(ez_peak) == 1:
+                        ez_peak = ez_peak[0]
+                    else:
+                        ez_peak = None
                     
-                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
+        
+                    elm_roi = raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth]
+                    elm_roi[seg_mask != 7] = np.nan
 
-                        i_profile = np.mean(roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
-
-
-                        rpe_grad = int(
-                            np.round(
-                                np.max(imglayers["rpe"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
-
-                        ez_grad = int(
-                            np.round(
-                                np.min(imglayers["isos"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
-                        
-                        ez_peak  = ez_grad - 2 + np.where(i_profile[ez_grad - 2:ez_grad + 5] == np.max(i_profile[ez_grad - 2:ez_grad + 5]))[0][0]
-
-                        rpe_peak = find_peaks(i_profile[rpe_grad - 5:rpe_grad + 2], height=0)[0]
-                        if len(rpe_peak) > 0:
-                            rpe_peak = rpe_grad - 5 + rpe_peak[-1]
-                        else:
-                            rpe_peak = None                        
-                        
-                        
-                        elm_peak = find_peaks(i_profile[ez_peak - 10:ez_peak], height=0)[0]
-                        if len(elm_peak) > 0:
-                            elm_peak = ez_peak - 10 + elm_peak[-1]
-                        else:
-                            elm_peak = None
-                            
+                    elm_peak = find_peaks(np.nanmean(elm_roi),1)[0]
+                    if len(elm_peak) == 1:
+                        elm_peak = elm_peak[0]
+                    else:
+                        elm_peak = None                    
                             
                         #plt.plot(np.arange(len(i_profile)), i_profile,
                         #             rpe_peak, i_profile[rpe_peak], "x",
                         #             ez_peak, i_profile[ez_peak], "x",
                         #             elm_peak, i_profile[elm_peak], "x")
                         
+
                         # set distances
                         if rpe_peak:
                             if ez_peak:
@@ -1492,7 +1469,7 @@ class RelEZIntensity:
             
                 for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
                 
-                    worksheet.write(row, j * len(header), ids) # ID
+                    worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
                     worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
                     worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
                     worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
