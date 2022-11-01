@@ -6,15 +6,14 @@ from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.0.9"
+__version__ = "0.0.10"
 
 
 #with open("README.rst") as readme_file:
  #   readme = readme_file.read()
 
 #with open("HISTORY.rst") as history_file:
- #   history = history_file.read()
-
+ #   history = history_file.read()10
 requirements = ["eyepie==0.3.7", "numpy>=1.22", "opencv-python==4.5.3.56", "pillow==9.0.1",
     "xlsxwriter", "read-roi", "imgaug==0.4.0", "matplotlib==3.6", "PyYAML==6.0", "scikit-image", "scikit_learn==1.1.1", "scipy==1.8.0",
      "tqdm==4.64.0", "pandas", "ipywidgets"]
