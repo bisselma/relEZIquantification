@@ -1178,7 +1178,7 @@ class RelEZIntensity:
             
             # get data
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                vol_file_path=data_dict[vol_id],
+                vol_file_path=vol_id,
                 model_file_path=None,
                 use_gpu=True,
                 cuda_device=0,
@@ -1189,11 +1189,11 @@ class RelEZIntensity:
 
             # check if given number of b scans match with pre-defined number 
             if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_id), ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[vol_id])]
+            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(vol_id)]
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
