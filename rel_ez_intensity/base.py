@@ -1155,7 +1155,7 @@ class RelEZIntensity:
 
 
         # data directories
-        data_dict = ut.get_vol_list(folder_path, project)
+        data_dict, _ = ut.get_vol_list(folder_path, project)
 
 
         # central bscan/ascan, number of stacks (nos)
