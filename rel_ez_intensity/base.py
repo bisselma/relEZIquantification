@@ -919,10 +919,10 @@ class RelEZIntensity:
             yy = yy * (25/241
             )
             for idx in range(33):            
-                mask_iamd_m[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = idx
-                mask_iamd_s[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) < radius ** 2] = idx
-                stimuli_m_map[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = stimuli_m[idx]
-                stimuli_s_map[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) < radius ** 2] = stimuli_s[idx]
+                mask_iamd_m[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) <= radius ** 2] = idx
+                mask_iamd_s[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) <= radius ** 2] = idx
+                stimuli_m_map[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) <= radius ** 2] = stimuli_m[idx]
+                stimuli_s_map[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) <= radius ** 2] = stimuli_s[idx]
                 
 
             
