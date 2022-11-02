@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-import sy1
+import sys
 from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
