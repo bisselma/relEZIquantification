@@ -102,8 +102,8 @@ def get_microperimetry(
     if len(idx) == 1:
         data = df.loc[idx[0]]
     else:
-        raise ValueError("ID is not in data")
-        
+        return None 
+
     micro = np.array(data[
             np.logical_and(
                 np.arange(0,len(data)) > 25,
@@ -141,6 +141,65 @@ def get_microperimetry_IR_image_list(
                 return_list_s[pid] = full_path
 
     return return_list_m, return_list_s
+
+def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
+
+            # create binary image with iamd grid 
+            if not stimuli:
+                return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
+            else:
+                mask_iamd = np.zeros((scan_size[0], scan_size[1] // stackwidth))
+                stimuli_map = np.zeros_like(mask_iamd)
+
+            # get microperimetry IR image m and s
+            img1_raw = cv2.imread(ir_path,0)
+            (h_micro, w_micro) = img1_raw.shape[:2]
+
+            # rotated IR image 
+            (cX, cY) = (w_micro // 2, h_micro // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
+            img1_raw = cv2.warpAffine(img1_raw, M, (w_micro, h_micro))
+
+            # flip microperimetry-IR image
+            if lat == "OS":
+                img1_raw = np.flip(img1_raw, 1)
+
+            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
+            offset = int((h_micro/36) * 3)
+            img1 = img1_raw[offset:-offset,offset:-offset]
+            img1 = cv2.resize(img1,slo_img.shape)
+
+
+
+            # calculate affine transformation matrix A
+            H = get2DProjectiveTransformationMartix_by_SuperRetina(img1, slo_img)
+        
+
+            # transform grid
+            grid_coords = np.zeros((3,len(x)))
+            grid_coords[0,:] = x
+            grid_coords[1,:] = y
+            grid_coords[2,:] = np.ones((1,len(x)))
+
+            grid_coords_transf = H @ grid_coords
+
+
+            x_new = (grid_coords_transf[0,:] * (30/ 768)) 
+            y_new = ((grid_coords_transf[1,:] - 64) * (25 / 640))
+
+            
+            yy,xx = np.mgrid[:241,:(768 // stackwidth)]
+
+            xx = xx * (30/(768 // stackwidth))
+            yy = yy * (25/241)
+
+            for idx in range(33):            
+                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx
+                stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
+
+
+            return mask_iamd, stimuli_map
+
 
 def get_id_by_file_path(
     file_path: Optional[str] = None,

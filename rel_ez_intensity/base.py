@@ -593,6 +593,11 @@ class RelEZIntensity:
                 range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
                 ):
 
+                if len(bscan._scan_raw) > 0:
+                    bscan_data = bscan._scan_raw
+                else:
+                    continue
+
                 if self.base_layer == None or self.base_layer == "vol":
                     try:
                         layer = bscan.layers[ref_layer].astype(np.uint16)
@@ -601,7 +606,7 @@ class RelEZIntensity:
                 if self.base_layer == "masks":
                     layer = ut.get_seg_by_mask(mask_list[idx_r], 10) # the last argument depends on the number of layer classes of the segmentation mask
 
-                bscan_data = bscan._scan_raw
+                
                 if lat == "OS":
                     bscan_data = np.flip(bscan_data,1)
                     layer = np.flip(layer)
@@ -787,13 +792,10 @@ class RelEZIntensity:
 
             # get slo image 
             slo_img = vol.slo_image
-            h_slo, w_slo = slo_img.shape
 
 
             # laterality 
             lat = self.patients[keys].visits[visit -2].laterality
-
-
 
             stimuli_s = ut.get_microperimetry(
                 df,
@@ -809,9 +811,7 @@ class RelEZIntensity:
                 lat,
                 "M")
 
-        
-
-            # create grid coords
+           # create grid coords
             px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
             ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
             ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
@@ -862,70 +862,27 @@ class RelEZIntensity:
             # transform slo_img
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
-            # get microperimetry IR image m and s
-            img1_raw_m = cv2.imread(ir_list_m[self.patients[keys].pid],0)
-            img1_raw_s = cv2.imread(ir_list_s[self.patients[keys].pid],0)
-            (h_micro, w_micro) = img1_raw_m.shape[:2]
+            mask_iamd_m, stimuli_m_map = ut.get_microperimetry_maps(
+                    slo_img, 
+                    ir_list_m[self.patients[keys].pid], 
+                    lat, 
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_m,
+                    radius,
+                    x,y)
 
-            # rotated IR image 
-            (cX, cY) = (w_micro // 2, h_micro // 2)
-            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
-            img1_raw_m = cv2.warpAffine(img1_raw_m, M, (w_micro, h_micro))
-            img1_raw_s = cv2.warpAffine(img1_raw_s, M, (w_micro, h_micro))
+            mask_iamd_s, stimuli_s_map = ut.get_microperimetry_maps(
+                    slo_img, 
+                    ir_list_s[self.patients[keys].pid], 
+                    lat, 
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_s,
+                    radius,
+                    x,y)
 
-            # flip microperimetry-IR image
-            if lat == "OS":
-                img1_raw_m = np.flip(img1_raw_m, 1)
-                img1_raw_s = np.flip(img1_raw_s, 1)
-
-            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
-            offset = int((h_micro/36) * 3)
-            img1_m = img1_raw_m[offset:-offset,offset:-offset]
-            img1_m = cv2.resize(img1_m,(h_slo,w_slo))
-            img1_s = img1_raw_s[offset:-offset,offset:-offset]
-            img1_s = cv2.resize(img1_s,(h_slo,w_slo))
-
-
-            # calculate affine transformation matrix A
-            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_m, slo_img)
-            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_s, slo_img)
-        
-
-            # transform grid
-            grid_coords = np.zeros((3,len(x)))
-            grid_coords[0,:] = x
-            grid_coords[1,:] = y
-            grid_coords[2,:] = np.ones((1,len(x)))
-
-            grid_coords_transf_m = H_m @ grid_coords
-            grid_coords_transf_s = H_s @ grid_coords
-
-            x_new_m = (grid_coords_transf_m[0,:] * (30/ 768)) 
-            y_new_m = ((grid_coords_transf_m[1,:] - 64) * (25 / 640))
-
-            x_new_s = (grid_coords_transf_s[0,:] * (30/ 768))
-            y_new_s = ((grid_coords_transf_s[1,:] - 64) * (25 / 640))
-
-            # create binary image with iamd grid 
-            mask_iamd_m = np.zeros((self.scan_size[0],self.scan_size[1] // self.stackwidth))
-            mask_iamd_s = np.zeros_like(mask_iamd_m)
-            stimuli_m_map = np.zeros_like(mask_iamd_m)
-            stimuli_s_map = np.zeros_like(mask_iamd_m)
-
-            
-            yy,xx = np.mgrid[:241,:(768 // self.stackwidth)]
-
-            xx = xx * (30/(768 // self.stackwidth))
-            yy = yy * (25/241
-            )
-            for idx in range(33):            
-                mask_iamd_m[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) <= radius ** 2] = idx
-                mask_iamd_s[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) <= radius ** 2] = idx
-                stimuli_m_map[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) <= radius ** 2] = stimuli_m[idx]
-                stimuli_s_map[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) <= radius ** 2] = stimuli_s[idx]
-                
-
-            
+    
             self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
             self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
             self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
