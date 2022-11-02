@@ -583,6 +583,8 @@ class RelEZIntensity:
                 else:
                     rpd_map = np.zeros(self.scan_size).astype(bool)            
 
+            print(vol_id)
+            print(vol_data.shape)
             
             for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
