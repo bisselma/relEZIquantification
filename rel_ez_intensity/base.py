@@ -523,7 +523,11 @@ class RelEZIntensity:
             if vol_data._meta["NumBScans"] != scan_size[0]:
                 print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
                 continue
-            
+
+            # check if given number of a scans match with pre-defined number 
+            if vol_data._meta["SizeX"] != scan_size[1]:
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["SizeX"], scan_size[1]))
+                continue            
             
             # check if mask dict contains vol id
             if base_layer == "masks":
