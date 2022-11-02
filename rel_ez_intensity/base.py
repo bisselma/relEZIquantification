@@ -1243,9 +1243,9 @@ class RelEZIntensity:
                     rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
                     seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
 
-                    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[-1]
+                    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
                     if len(rpe_peak) == 1:
-                        rpe_peak = rpe_peak[0]
+                        rpe_peak = rpe_peak[-1]
                     else:
                         rpe_peak = None
 
