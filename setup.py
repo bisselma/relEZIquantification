@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """The setup script."""
-import sys
+import sy1
 from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 
 #with open("README.rst") as readme_file:
