@@ -626,7 +626,7 @@ class RelEZIntensity:
                 
                 
                 # handling of error segmentation
-                if any(np.logical_or((layer - 40) < 0, (layer + 10) > 496)):
+                if any(np.logical_or((layer[layer>0] - 40) < 0, (layer[layer>0] + 10) > 496)):
                     continue
                 
                 # create region of interest image 
@@ -872,23 +872,23 @@ class RelEZIntensity:
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
             mask_iamd_m, stimuli_m_map = ut.get_microperimetry_maps(
-                    slo_img, 
-                    ir_list_m[self.patients[keys].pid], 
-                    lat, 
+                    ir_list_m[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
                     self.scan_size,
                     self.stackwidth,
                     stimuli_m,
-                    radius,
                     x,y)
 
             mask_iamd_s, stimuli_s_map = ut.get_microperimetry_maps(
-                    slo_img, 
-                    ir_list_s[self.patients[keys].pid], 
-                    lat, 
+                    ir_list_s[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
                     self.scan_size,
                     self.stackwidth,
                     stimuli_s,
-                    radius,
                     x,y)
 
     
