@@ -145,7 +145,7 @@ def get_microperimetry_IR_image_list(
 def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
 
             # create binary image with iamd grid 
-            if not stimuli:
+            if stimuli is None:
                 return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
             else:
                 mask_iamd = np.zeros((scan_size[0], scan_size[1] // stackwidth))
