@@ -625,13 +625,16 @@ class RelEZIntensity:
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
                 
+                # handling of error segmentation
+                if any(np.logical_or((layer - 40) < 0, (layer + 10) > 496)):
+                    continue
                 
                 # create region of interest image 
                 roi = np.zeros((50,scan_size[1])).astype(np.float32)
                 
                 for i, l in enumerate(layer):
                     if l < 496 and l > 0:
-                        roi[:,i] = bscan_data[l-40:l+10,i]
+                            roi[:,i] = bscan_data[l-40:l+10,i]
                         
             
 # =============================================================================
