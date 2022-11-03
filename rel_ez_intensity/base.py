@@ -631,7 +631,6 @@ class RelEZIntensity:
                 
                 for i, l in enumerate(layer):
                     if l < 496 and l > 0:
-                        print(idx_r)
                         roi[:,i] = bscan_data[l-40:l+10,i]
                         
             
