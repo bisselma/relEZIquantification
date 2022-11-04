@@ -409,7 +409,7 @@ class RelEZIntensity:
         ref_layer: Optional[str] = None,
         base_layer: Optional[str] = None,
         area_exclusion: Optional[Dict] = None,
-        *args
+        **kwargs
     ) -> None:
 
         """
@@ -473,9 +473,14 @@ class RelEZIntensity:
 
 
         # data directories
-        if args:
+        if self.project:
             if self.project == "macustar":
                 data_dict, _ = ut.get_vol_list(folder_path, self.project)
+                if "micro_ir_path" in kwargs.keys(): # check weather ID of the macustar cohort exist also in microperimetry cohort. Only ids existing in both cohorts are considered 
+                    ir_list_keys = ut.get_microperimetry_IR_image_list(kwargs["micro_ir_path"])[0].keys()
+                    for keys in list(data_dict.keys()):
+                        if keys not in ir_list_keys:
+                            del data_dict[keys]
             elif self.project == "mactel":
                 data_dict, vids = ut.get_vol_list(folder_path, self.project)
         else:
@@ -583,8 +588,6 @@ class RelEZIntensity:
                 else:
                     rpd_map = np.zeros(self.scan_size).astype(bool)            
 
-            print(vol_id)
-            print(vol_data.shape)
             
             for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                 vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
@@ -652,7 +655,7 @@ class RelEZIntensity:
                         
                         
                         # excluding section
-                        # excluding condition can be 
+                        # excluding condition can be:
                             
                         # a thickness map of rpedc
                         if "rpedc" in self.area_exclusion.keys():
