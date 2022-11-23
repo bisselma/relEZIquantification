@@ -1417,18 +1417,18 @@ class RelEZIntensity:
     
         if project == "macustar micro":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]",
-             "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "m stimulus", "m stimulus grid", "m stimulus", "ez", "elm"]
+             "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "s stimulus", "s stimulus grid", "m stimulus", "ez", "elm"]
         elif project == "macustar":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
 
         if os.path.isdir(folder_path):
-            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"),  {'nan_inf_to_errors': True})
             worksheet = workbook.add_worksheet()
             worksheet.write_row(0, 0, header)
             
         else:
             os.path.mkdir(folder_path)
-            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"),  {'nan_inf_to_errors': True})
             worksheet = workbook.add_worksheet()            
             worksheet.write_row(0, 0, header)
             

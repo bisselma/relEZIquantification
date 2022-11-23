@@ -112,9 +112,9 @@ def get_microperimetry(
                     np.arange(0,len(data)) % 2 == 0)
                     )].array._ndarray)
 
-    micro[micro == "<0"] = -1
+    micro[micro == "<0"] = np.nan
 
-    return (-1) * micro.astype(int) 
+    return micro 
 
 def get_microperimetry_IR_image_list(
      folder_path: Union[str, Path, IO] = None,
@@ -146,10 +146,10 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth
 
             # create binary image with iamd grid 
             if stimuli is None:
-                return np.ones((scan_size[0], scan_size[1] // stackwidth)) * (-1),  np.ones((scan_size[0], scan_size[1] // stackwidth)) * (-1)      
+                return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
             else:
-                mask_iamd = np.zeros((scan_size[0], scan_size[1] // stackwidth))
-                stimuli_map = np.zeros_like(mask_iamd)
+                mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
+                stimuli_map = np.full_like(mask_iamd, np.nan)
 
             # get microperimetry IR image m and s
             img1_raw = cv2.imread(ir_path,0)
@@ -193,7 +193,7 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth
             xx = xx * (30/(768 // stackwidth))
             yy = yy * (25/241)
 
-            for idx in range(33):            
+            for idx in range(1,34):            
                 mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx
                 stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
 
@@ -574,7 +574,7 @@ def show_grid_over_relEZIMap(
     
     # calculate transformed intensity map
     w, h = rel_ez_i_map_ill.shape  
-    rel_ez_i_map_ill = cv2.warpPerspective(rel_ez_i_map_ill,H_matrix, (w, h), borderMode=cv2.BORDER_CONSTANT, borderValue=(0))
+    rel_ez_i_map_ill     
 
 
     rads = np.arange(0,360,20) *  np.pi / 180
