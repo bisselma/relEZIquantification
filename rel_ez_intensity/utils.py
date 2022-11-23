@@ -193,8 +193,8 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth
             xx = xx * (30/(768 // stackwidth))
             yy = yy * (25/241)
 
-            for idx in range(1,34):            
-                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx
+            for idx in range(33):            
+                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx + 1
                 stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
 
 
