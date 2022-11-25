@@ -567,14 +567,13 @@ def show_grid_over_relEZIMap(
     showfig,
     path
     ):
-    
     # create rel_ezi heatmap illustration image
     rel_ez_i_map_ill = np.zeros_like(img)
     rel_ez_i_map_ill[64:-64, :] = rel_ez_i_map
     
     # calculate transformed intensity map
     w, h = rel_ez_i_map_ill.shape  
-    rel_ez_i_map_ill     
+    rel_ez_i_map_ill = cv2.warpAffine(rel_ez_i_map_ill, H_matrix, (w, h))    
 
 
     rads = np.arange(0,360,20) *  np.pi / 180
@@ -612,11 +611,11 @@ def show_grid_over_relEZIMap(
 
     plt.imshow(img, cmap="gray")
     plt.imshow(int_grid, cmap = "RdYlGn", alpha=0.5, vmax= 4)
-    im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=0, vmax=33)
+    print(x,y,stimuli)
+    im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=-30, vmax=0.5 * np.nanmax(stimuli))
     for i, val in enumerate(stimuli):
-        plt.annotate(str(val).replace("-",""), (x[i], y[i]))
+        plt.annotate(str(val), (x[i], y[i]))
 
-        
     divider = make_axes_locatable(ax)
     cax = divider.append_axes("right", size="5%", pad=0.05)  
     cbar = plt.colorbar(im, cax=cax)
