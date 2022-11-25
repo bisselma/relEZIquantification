@@ -112,7 +112,7 @@ def get_microperimetry(
                     np.arange(0,len(data)) % 2 == 0)
                     )].array._ndarray)
 
-    micro[micro == "<0"] = np.nan
+    micro[micro == "<0"] = -1
 
     return micro 
 
