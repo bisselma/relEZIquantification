@@ -612,7 +612,7 @@ def show_grid_over_relEZIMap(
 
     plt.imshow(img, cmap="gray")
     plt.imshow(int_grid, cmap = "RdYlGn", alpha=0.5, vmax= 4)
-    im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=0, vmax=np.nanmax(stimuli))
+    im = ax.scatter(x,y, c=stimuli, cmap = "RdYlGn_r",vmin=0, vmax=33)
     for i, val in enumerate(stimuli):
         plt.annotate(str(val).replace("-",""), (x[i], y[i]))
 
