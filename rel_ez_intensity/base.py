@@ -1459,7 +1459,7 @@ class RelEZIntensity:
             
                 if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
                     workbook.close()
-                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
+                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
                     worksheet = workbook.add_worksheet()            
                     worksheet.write_row(0, 0, header)   
                     row = 1
