@@ -1158,7 +1158,7 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_id in data_dict.values():
+        for vol_id in data_dict:
 
             # current distance map
             curr_ez_distance = np.empty((1, scan_size[0], nos))
@@ -1168,7 +1168,7 @@ class RelEZIntensity:
             
             # get data
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                vol_file_path=vol_id,
+                vol_file_path=data_dict[vol_id],
                 model_file_path=None,
                 use_gpu=True,
                 cuda_device=0,
@@ -1179,7 +1179,7 @@ class RelEZIntensity:
 
             # check if given number of b scans match with pre-defined number 
             if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_id), ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
             if self.project == "macustar":
