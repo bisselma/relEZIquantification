@@ -1182,20 +1182,12 @@ class RelEZIntensity:
                 print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
-            if self.project == "macustar":
-                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-                try:
-                    fovea_bscan, fovea_ascan = fovea_coords[vol_id]
-                except:
-                    print("ID %s is missing in Fovea List " % vol_id)
-                    continue
-            elif self.project == "mactel":
-                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-                try:
-                    fovea_bscan, fovea_ascan = fovea_coords[vids[vol_id]]
-                except:
-                    print("ID %s is missing in Fovea List " % vids[vol_id])
-                    continue
+            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+            try:
+                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+            except:
+                print("ID %s is missing in Fovea List " % vol_id)
+                continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
