@@ -265,9 +265,9 @@ def get_vol_list(
                 pid = full_path.split("\\")[-2].split("_")[1][4:]
                 path_list[pid] = full_path
             elif project == "mactel":
-                pid = full_path.split("\\")[-3].split("_")[1][4:]
+                pid = full_path.split("\\")[-4]
                 path_list[pid] = full_path  
-                vid_list[pid] = full_path.split("\\")[-1].split(".")[0]             
+                vid_list[pid] = full_path.split("\\")[-1].split("_")[-1].split(".")[0]             
     return path_list, vid_list
             
 def get_rpedc_list(
