@@ -1117,7 +1117,7 @@ class RelEZIntensity:
         if not project:
             project = self.project
         else:
-            self.fovea_coords = fovea_coords
+            self.project = project
         if not scan_size:
             scan_size = self.scan_size
         else:
