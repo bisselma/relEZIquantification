@@ -482,7 +482,7 @@ class RelEZIntensity:
                         if keys not in ir_list_keys:
                             del data_dict[keys]
             elif self.project == "mactel":
-                data_dict, vids = ut.get_vol_list(folder_path, self.project)
+                data_dict, pids = ut.get_vol_list(folder_path, self.project)
         else:
             raise ValueError("no project name is given")
 
@@ -545,20 +545,12 @@ class RelEZIntensity:
             
 
             
-            if self.project == "macustar":
-                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-                try:
-                    fovea_bscan, fovea_ascan = fovea_coords[vol_id]
-                except:
-                    print("ID %s is missing in Fovea List " % vol_id)
-                    continue
-            elif self.project == "mactel":
-                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-                try:
-                    fovea_bscan, fovea_ascan = fovea_coords[vids[vol_id]]
-                except:
-                    print("ID %s is missing in Fovea List " % vids[vol_id])
-                    continue
+            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+            try:
+                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+            except:
+                print("ID %s is missing in Fovea List " % vol_id)
+                continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
@@ -763,7 +755,7 @@ class RelEZIntensity:
                 )            
             elif self.project == "mactel": 
                 current_map = OCTMap(
-                    vids[vol_id],
+                    vol_id,
                     "REZI-Map",
                     data_dict[vol_id],
                     vol_data._meta["VisitDate"],
@@ -772,22 +764,42 @@ class RelEZIntensity:
                     lat,
                     (fovea_ascan, fovea_bscan), # (x,y)
                     maps_data
-                )       
+                )
+
+            if self.project == "macustar":    
         
-            if vol_id in self.patients.keys():
+                if vol_id in self.patients.keys():
                 
-                # not yet tested
-                for i, visit in enumerate(self.patients[vol_id].visits):
-                    if visit.date_of_origin < current_map.date_of_origin:
-                        continue
-                    if visit.date_of_origin > current_map.date_of_origin:
-                        self.patients[vol_id].visits.insert(current_map, i)
-                        break
-            else:
-                self.patients[vol_id] = Patient(
-                                            vol_id,
-                                            vol_data._meta["DOB"],
-                                            [current_map])
+                    # not yet tested
+                    for i, visit in enumerate(self.patients[vol_id].visits):
+                        if visit.date_of_origin < current_map.date_of_origin:
+                            continue
+                        if visit.date_of_origin > current_map.date_of_origin:
+                            self.patients[vol_id].visits.insert(current_map, i)
+                            break
+                else:
+                    self.patients[vol_id] = Patient(
+                                                vol_id,
+                                                vol_data._meta["DOB"],
+                                                [current_map])
+
+            if self.project == "mactel":    
+        
+                if pids[vol_id] in self.patients.keys():
+                
+                    # not yet tested
+                    for i, visit in enumerate(self.patients[pids[vol_id]].visits):
+                        if visit.date_of_origin < current_map.date_of_origin:
+                            continue
+                        elif visit.date_of_origin >= current_map.date_of_origin:
+                            self.patients[vol_id].visits.insert(current_map, i)
+                            break
+                else:
+                    self.patients[pids[vol_id]] = Patient(
+                                                pids[vol_id],
+                                                vol_data._meta["DOB"],
+                                                [current_map])
+            
                         
     def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
 
