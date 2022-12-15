@@ -534,6 +534,7 @@ class RelEZIntensity:
                 print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["SizeX"], scan_size[1]))
                 continue            
             
+            
             # check if mask dict contains vol id
             if base_layer == "masks":
                 if vol_id in mask_dict.keys():
@@ -541,15 +542,23 @@ class RelEZIntensity:
                 else:
                     print("ID: %s considered segmentation masks not exist" % vol_id)
                     continue
+            
 
             
-            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            try:
-                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
-            except:
-                print("ID %s is missing in Fovea List " % vol_id)
-                continue
-            
+            if self.project == "macustar":
+                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+                try:
+                    fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+                except:
+                    print("ID %s is missing in Fovea List " % vol_id)
+                    continue
+            elif self.project == "mactel":
+                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+                try:
+                    fovea_bscan, fovea_ascan = fovea_coords[vids[vol_id]]
+                except:
+                    print("ID %s is missing in Fovea List " % vids[vol_id])
+                    continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
@@ -578,7 +587,7 @@ class RelEZIntensity:
                 if vol_id in ae_dict_1.keys():
                     rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
-                    print("ID: %s considered segmentation masks not exist" % vol_id)
+                    print("ID: %s considered rpedc map not exist" % vol_id)
                     continue
             
             # if area_exception is "rpedc" get list of thickness maps 
@@ -686,6 +695,8 @@ class RelEZIntensity:
 
 
                         # a ez-loss map like in mactel project
+                        if "ezloss" in self.area_exclusion.keys():
+                            pass 
                         #...
                         # a thickness determine by the distance between bm and rpe based on segmentation layer
                         #...
@@ -1077,11 +1088,11 @@ class RelEZIntensity:
     def create_ssd_maps(
         self,
         folder_path: Union[str, Path, IO] = None,
+        project: Optional[str] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        project: Optional[str] = None
     ) -> None:
 
         """
@@ -1101,6 +1112,10 @@ class RelEZIntensity:
         
         if not fovea_coords:
             fovea_coords = self.fovea_coords
+        else:
+            self.fovea_coords = fovea_coords
+        if not project:
+            project = self.project
         else:
             self.fovea_coords = fovea_coords
         if not scan_size:
@@ -1124,7 +1139,13 @@ class RelEZIntensity:
 
 
         # data directories
-        data_dict, _ = ut.get_vol_list(folder_path, project)
+        if self.project:
+            if self.project == "macustar":
+                data_dict, _ = ut.get_vol_list(folder_path, self.project)
+            elif self.project == "mactel":
+                data_dict, vids = ut.get_vol_list(folder_path, self.project)
+        else:
+            raise ValueError("no project name is given")
 
 
         # central bscan/ascan, number of stacks (nos)
@@ -1161,8 +1182,20 @@ class RelEZIntensity:
                 print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(vol_id), ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
-            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(vol_id)]
+            if self.project == "macustar":
+                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+                try:
+                    fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+                except:
+                    print("ID %s is missing in Fovea List " % vol_id)
+                    continue
+            elif self.project == "mactel":
+                # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+                try:
+                    fovea_bscan, fovea_ascan = fovea_coords[vids[vol_id]]
+                except:
+                    print("ID %s is missing in Fovea List " % vids[vol_id])
+                    continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
