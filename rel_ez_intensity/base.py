@@ -586,7 +586,7 @@ class RelEZIntensity:
             
             for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                 ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
-                ms_analysis.classes[...][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
+                ms_analysis.classes[-1::][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
@@ -1196,7 +1196,7 @@ class RelEZIntensity:
             
             for bscan, seg_mask, ez, elm in zip(
                 ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
-                ms_analysis.classes[::-1,...][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
+                ms_analysis.classes[-1::][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 ):
