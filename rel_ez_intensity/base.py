@@ -537,22 +537,7 @@ class RelEZIntensity:
 
             if not self.elm_distance_map or not self.ez_distance_map:
                 raise ValueError("Site specific distance maps not given")
-                
-                
-            # if area_exception is "rpedc" get list of thickness maps 
-            if "rpedc" in self.area_exclusion.keys():
-                if vol_id in ae_dict_1.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
-                else:
-                    print("ID: %s considered rpedc map not exist" % vol_id)
-                    continue
-            
-            # if area_exception is "rpedc" get list of thickness maps 
-            if "rpd" in self.area_exclusion.keys():
-                if vol_id in ae_dict_2.keys():
-                    rpd_map = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
-                else:
-                    rpd_map = np.zeros(self.scan_size).astype(bool)            
+                           
 
             # get data
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
@@ -572,6 +557,21 @@ class RelEZIntensity:
                 fovea_ascan = scan_size[1] - fovea_ascan
             else:
                 fovea_ascan = fovea_ascan -1 
+
+            # if area_exception is "rpedc" get list of thickness maps 
+            if "rpedc" in self.area_exclusion.keys():
+                if vol_id in ae_dict_1.keys():
+                    rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
+                else:
+                    print("ID: %s considered rpedc map not exist" % vol_id)
+                    continue
+            
+            # if area_exception is "rpedc" get list of thickness maps 
+            if "rpd" in self.area_exclusion.keys():
+                if vol_id in ae_dict_2.keys():
+                    rpd_map = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
+                else:
+                    rpd_map = np.zeros(self.scan_size).astype(bool) 
 
             # check if given number of b scans match with pre-defined number 
             if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
@@ -608,8 +608,8 @@ class RelEZIntensity:
 
                 
                 if lat == "OS":
-                    bscan_data = np.flip(bscan_data,1)
-                    layer = np.flip(layer)
+                    bscan = np.flip(bscan,1)
+                    seg_mask = np.flip(seg_mask)
                 
                 
 
