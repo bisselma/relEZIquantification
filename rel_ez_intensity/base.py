@@ -457,7 +457,7 @@ class RelEZIntensity:
             self.stackwidth = stackwidth
         
         if not ref_layer:
-            ref_layer = "CHO"
+            ref_layer = 11
         else:
             if ref_layer == "RPE":
                 ref_layer = 10
@@ -724,7 +724,7 @@ class RelEZIntensity:
                     None,
                     "REZI-Map",
                     data_dict[vol_id],
-                    ms_analysis.visit_date_raw,
+                    ms_analysis._vol_file.header.visit_date_raw,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -736,7 +736,7 @@ class RelEZIntensity:
                     vol_id,
                     "REZI-Map",
                     data_dict[vol_id],
-                    ms_analysis.visit_date_raw,
+                    ms_analysis._vol_file.header.visit_date_raw,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -758,7 +758,7 @@ class RelEZIntensity:
                 else:
                     self.patients[vol_id] = Patient(
                                                 vol_id,
-                                                ms_analysis.birthdate_raw,
+                                                ms_analysis._vol_file.header.birthdate_raw,
                                                 [current_map])
 
             if self.project == "mactel":    
@@ -775,7 +775,7 @@ class RelEZIntensity:
                 else:
                     self.patients[pids[vol_id]] = Patient(
                                                 pids[vol_id],
-                                                ms_analysis.birthdate_raw,
+                                                ms_analysis._vol_file.header.birthdate_raw,
                                                 [current_map])
             
                         
@@ -1117,7 +1117,7 @@ class RelEZIntensity:
         else:
             self.stackwidth = stackwidth
         if not ref_layer:
-            ref_layer = "CHO"
+            ref_layer = 11
         else:
             if ref_layer == "RPE":
                 ref_layer = 10
@@ -1133,7 +1133,7 @@ class RelEZIntensity:
             if self.project == "macustar":
                 data_dict, _ = ut.get_vol_list(folder_path, self.project)
             elif self.project == "mactel":
-                data_dict, vids = ut.get_vol_list(folder_path, self.project)
+                data_dict, pids = ut.get_vol_list(folder_path, self.project)
         else:
             raise ValueError("no project name is given")
 
