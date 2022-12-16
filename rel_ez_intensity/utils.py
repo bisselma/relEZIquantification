@@ -362,6 +362,19 @@ def get_seg_by_mask(mask_path, n):
     
     return layer[0,:]
 
+def get_roi_masks(bscan, ref_layer, scan_size, seg_mask):
+    
+    # create raw_roi and seg_mask_roi
+    raw_roi = np.full((53,scan_size[1]), np.nan)
+    seg_mask_roi = np.full((53,scan_size[1]), np.nan)
+    for col_idx in range(scan_size[1]):
+        idxs_ref = np.where(seg_mask[:, col_idx] == ref_layer)[0]
+        if len(idxs_ref) > 0:
+            raw_roi[:, col_idx] = bscan[idxs_ref[0] -48: idxs_ref[0] +5, col_idx]
+            seg_mask_roi[:, col_idx] = seg_mask[idxs_ref[0] -48: idxs_ref[0] +5, col_idx]
+    
+    return raw_roi, seg_mask_roi
+
 def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
 
 

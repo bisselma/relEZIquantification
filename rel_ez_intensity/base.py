@@ -208,12 +208,18 @@ class RelEZIntensity:
             
         return ez_peak, elm_peak
 
-    def get_rpe_peak(self, i_profile):
-        peaks = find_peaks(i_profile[35:45])[0]
-        if len(peaks) > 0:
-            return 35 + peaks[np.where(i_profile[35 + peaks] == max(i_profile[35 + peaks]))[0]][-1]
+    def get_rpe_peak(self, raw_roi, seg_mask_roi, start_r, i, stackwidth):
+        rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+        rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
+        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
+
+        rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+        if len(rpe_peak) >= 1:
+            return rpe_peak[-1]
         else:
-            return 38
+            return None
+
+
     
     def get_rpedc_map(
         self,
@@ -486,9 +492,6 @@ class RelEZIntensity:
         else:
             raise ValueError("no project name is given")
 
-        if base_layer == "masks":
-            mask_dict = ut.get_mask_list(folder_path)
-
         if len(self.area_exclusion) == 1:
             if "rpedc" in self.area_exclusion.keys():
                 ae_dict_1 = ut.get_rpedc_list(folder_path)
@@ -518,32 +521,7 @@ class RelEZIntensity:
             curr_ez_intensity = np.zeros((scan_size[0], nos))
             curr_elm_intensity = np.zeros_like(curr_ez_intensity)
             curr_excluded = np.zeros_like(curr_ez_intensity)
-            
-            
-            # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(data_dict[vol_id])
-
-            
-            # check if given number of b scans match with pre-defined number 
-            if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
-                continue
-
-            # check if given number of a scans match with pre-defined number 
-            if vol_data._meta["SizeX"] != scan_size[1]:
-                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["SizeX"], scan_size[1]))
-                continue            
-            
-            
-            # check if mask dict contains vol id
-            if base_layer == "masks":
-                if vol_id in mask_dict.keys():
-                    mask_list = mask_dict[vol_id]
-                else:
-                    print("ID: %s considered segmentation masks not exist" % vol_id)
-                    continue
-            
-
+                  
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
             try:
@@ -554,16 +532,6 @@ class RelEZIntensity:
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
-            
-    
-            # laterality 
-            lat = vol_data._meta["ScanPosition"]
-
-            if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - fovea_ascan
-            else:
-                fovea_ascan = fovea_ascan -1
-
 
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
@@ -589,9 +557,39 @@ class RelEZIntensity:
                 else:
                     rpd_map = np.zeros(self.scan_size).astype(bool)            
 
+            # get data
+            ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+                vol_file_path=data_dict[vol_id],
+                model_file_path=None,
+                use_gpu=True,
+                cuda_device=0,
+                normalize_mean=0.5,
+                normalize_std=0.25,
+                cache_segmentation=True
+)
+
+            # laterality 
+            lat = ms_analysis._vol_file.header.scan_position
+
+            if lat == "OS": # if left eye is processed
+                fovea_ascan = scan_size[1] - fovea_ascan
+            else:
+                fovea_ascan = fovea_ascan -1 
+
+            # check if given number of b scans match with pre-defined number 
+            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                continue
+
+            # check if given number of a scans match with pre-defined number 
+            if ms_analysis._vol_file.header.size_x != scan_size[1]:
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), ms_analysis._vol_file.header.size_x, scan_size[1]))
+                continue  
+
             
-            for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
-                vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
+            for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
+                ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
+                ms_analysis.classes[::-1,...][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
@@ -603,18 +601,13 @@ class RelEZIntensity:
                 range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
                 ):
 
-                if len(bscan._scan_raw) > 0:
-                    bscan_data = bscan._scan_raw
-                else:
-                    continue
 
-                if self.base_layer == None or self.base_layer == "vol":
-                    try:
-                        layer = bscan.layers[ref_layer].astype(np.uint16)
-                    except:
-                        continue
-                if self.base_layer == "masks":
-                    layer = ut.get_seg_by_mask(mask_list[idx_r], 10) # the last argument depends on the number of layer classes of the segmentation mask
+                #if self.base_layer == None or self.base_layer == "vol":
+                #    try:
+                #        layer = bscan.layers[ref_layer].astype(np.uint16)
+                #    except:
+                #        continue
+
 
                 
                 if lat == "OS":
@@ -648,12 +641,13 @@ class RelEZIntensity:
 #                 plot_layers(roi, imglayers)                
 # =============================================================================
                 
+                
+                # get rois
+                raw_roi, seg_mask_roi = ut.get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
+                
                 # iterate over bscans
-                for i in range(n_st):
-                    
-                    
-                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
-                        
+                for i in range(n_st):                    
+                                           
                         
                         # excluding section
                         # excluding condition can be:
@@ -692,19 +686,16 @@ class RelEZIntensity:
                         #...
                         # a thickness determine by the distance between bm and rpe based on segmentation layer
                         #...
-                            
-                        
-                        
-                        i_profile =  np.zeros((50, 1)).astype(np.float32)[:,0] # intensity profile
-                        for idxs, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
-                            if l < 496 and l > 0:
-                                i_profile = i_profile + bscan_data[l-40:l+10,start_r + i * stackwidth + idxs]
-                        i_profile/= self.stackwidth
                         
                         
                         # get rpe peak
-                        rpe_peak = self.get_rpe_peak(i_profile)
+                        rpe_peak = self.get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
+
+                        if not rpe_peak:
+                            continue
                         
+                        i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
+
                         ez_peak, elm_peak = self.get_ez_elm_peak(i_profile,
                                                             float(rpe_peak),
                                                             ez_ssd_mean[start_w + i],
@@ -746,7 +737,7 @@ class RelEZIntensity:
                     None,
                     "REZI-Map",
                     data_dict[vol_id],
-                    vol_data._meta["VisitDate"],
+                    ms_analysis.visit_date_raw,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -758,7 +749,7 @@ class RelEZIntensity:
                     vol_id,
                     "REZI-Map",
                     data_dict[vol_id],
-                    vol_data._meta["VisitDate"],
+                    ms_analysis.visit_date_raw,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -780,7 +771,7 @@ class RelEZIntensity:
                 else:
                     self.patients[vol_id] = Patient(
                                                 vol_id,
-                                                vol_data._meta["DOB"],
+                                                ms_analysis.birthdate_raw,
                                                 [current_map])
 
             if self.project == "mactel":    
@@ -797,7 +788,7 @@ class RelEZIntensity:
                 else:
                     self.patients[pids[vol_id]] = Patient(
                                                 pids[vol_id],
-                                                vol_data._meta["DOB"],
+                                                ms_analysis.birthdate_raw,
                                                 [current_map])
             
                         
@@ -1177,6 +1168,17 @@ class RelEZIntensity:
             curr_ez_distance[:] = np.nan
             curr_elm_distance = np.full_like(curr_ez_distance, np.nan)
             
+
+            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
+            try:
+                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+            except:
+                print("ID %s is missing in Fovea List " % vol_id)
+                continue
+            
+            # change orientation from top down, subtract on from coords to keep 0-indexing of python            
+            fovea_bscan = scan_size[0] - fovea_bscan
+
             
             # get data
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
@@ -1189,21 +1191,6 @@ class RelEZIntensity:
                 cache_segmentation=True
 )
 
-            # check if given number of b scans match with pre-defined number 
-            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
-                continue
-
-            # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            try:
-                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
-            except:
-                print("ID %s is missing in Fovea List " % vol_id)
-                continue
-            
-            # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-            fovea_bscan = scan_size[0] - fovea_bscan
-
             # laterality 
             lat = ms_analysis._vol_file.header.scan_position
 
@@ -1213,6 +1200,12 @@ class RelEZIntensity:
                 fovea_ascan = fovea_ascan -1
 
             d_bscan  = c_bscan - fovea_bscan
+
+
+            # check if given number of b scans match with pre-defined number 
+            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                continue
             
             for bscan, seg_mask, ez, elm in zip(
                 ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
@@ -1232,15 +1225,9 @@ class RelEZIntensity:
                 start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
-                
-                # create raw_roi and seg_mask_roi
-                raw_roi = np.full((53,scan_size[1]), np.nan)
-                seg_mask_roi = np.full((53,scan_size[1]), np.nan)
-                for col_idx in range(scan_size[1]):
-                    idxs_ref = np.where(seg_mask[:, col_idx] == ref_layer)[0]
-                    if len(idxs_ref) > 0:
-                        raw_roi[:, col_idx] = bscan[idxs_ref[0] -48: idxs_ref[0] +5, col_idx]
-                        seg_mask_roi[:, col_idx] = seg_mask[idxs_ref[0] -48: idxs_ref[0] +5, col_idx]
+
+                # get rois
+                raw_roi, seg_mask_roi = ut.get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
                 
 
                 for i in range(n_st):
