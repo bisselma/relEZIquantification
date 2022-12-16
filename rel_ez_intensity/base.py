@@ -413,7 +413,6 @@ class RelEZIntensity:
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        base_layer: Optional[str] = None,
         area_exclusion: Optional[Dict] = None,
         **kwargs
     ) -> None:
@@ -431,7 +430,6 @@ class RelEZIntensity:
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
-            base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
                                             # if values (boolean) are True the area should not be analysed.
             *args: project
@@ -459,15 +457,14 @@ class RelEZIntensity:
             self.stackwidth = stackwidth
         
         if not ref_layer:
-            ref_layer = "BM"
-        
-        if not base_layer:
-            if not self.base_layer:
-                base_layer = self.base_layer = "vol"
-            else:
-                base_layer = self.base_layer
+            ref_layer = "CHO"
         else:
-            self.base_layer = base_layer
+            if ref_layer == "RPE":
+                ref_layer = 10
+            elif ref_layer == "BM":
+                ref_layer = 11
+            else:
+                raise ValueError("layer name for reference layer not vaild")
 
         if not area_exclusion:
             if not self.area_exclusion:
