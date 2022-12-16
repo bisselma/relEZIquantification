@@ -609,7 +609,7 @@ class RelEZIntensity:
                 
                 if lat == "OS":
                     bscan = np.flip(bscan,1)
-                    seg_mask = np.flip(seg_mask)
+                    seg_mask = np.flip(seg_mask,1)
                 
                 
 
@@ -1203,7 +1203,7 @@ class RelEZIntensity:
                 
                 if lat == "OS":
                     bscan = np.flip(bscan,1)
-                    seg_mask = np.flip(seg_mask)
+                    seg_mask = np.flip(seg_mask,1)
                 
                 # get start position to read data
                 d_ascan = c_ascan - fovea_ascan
