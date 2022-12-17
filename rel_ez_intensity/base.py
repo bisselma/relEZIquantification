@@ -14,7 +14,7 @@ import pickle
 import os
 import cv2
 import xlsxwriter as xls
-from scipy.ndimage.morphology import binary_dilation
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from read_roi import read_roi_zip
 import pandas as pd
 
@@ -1231,7 +1231,10 @@ class RelEZIntensity:
 
 
                     ez_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
+                    ez_roi[binary_erosion( # use erosion to expand the search area by one on both sides
+                        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8,
+                        structure=np.ones((1,3)),
+                        border_value=1)] = np.nan
 
                     ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
                     if len(ez_peak) == 1:
@@ -1246,7 +1249,10 @@ class RelEZIntensity:
                     
         
                     elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7] = np.nan
+                    ez_roi[binary_erosion( # use erosion to expand the search area by one on both sides
+                        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7,
+                        structure=np.ones((1,3)),
+                        border_value=1)] = np.nan
 
                     elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
                     if len(elm_peak) >= 1:
