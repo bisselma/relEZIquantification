@@ -1234,8 +1234,13 @@ class RelEZIntensity:
                     ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
 
                     ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
-                    if len(ez_peak) >= 1:
+                    if len(ez_peak) == 1:
                         ez_peak = ez_peak[0]
+                    elif len(ez_peak) == 2:
+                        if ez_peak[0] == np.max(ez_peak):
+                            ez_peak = ez_peak[0]
+                        else:
+                            ez_peak = None
                     else:
                         ez_peak = None
                     
