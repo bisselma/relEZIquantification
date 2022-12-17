@@ -1251,7 +1251,7 @@ class RelEZIntensity:
                     elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
                     ez_roi[np.roll( # use erosion to expand the search area by one on both sides
                         seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7,
-                        -2)] = np.nan
+                        -4)] = np.nan
 
                     elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
                     if len(elm_peak) >= 1:
