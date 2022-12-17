@@ -724,7 +724,7 @@ class RelEZIntensity:
                     None,
                     "REZI-Map",
                     data_dict[vol_id],
-                    ms_analysis._vol_file.header.visit_date_raw,
+                    ms_analysis._vol_file.header.visit_date,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -736,7 +736,7 @@ class RelEZIntensity:
                     vol_id,
                     "REZI-Map",
                     data_dict[vol_id],
-                    ms_analysis._vol_file.header.visit_date_raw,
+                    ms_analysis._vol_file.header.visit_date,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -758,7 +758,7 @@ class RelEZIntensity:
                 else:
                     self.patients[vol_id] = Patient(
                                                 vol_id,
-                                                ms_analysis._vol_file.header.birthdate_raw,
+                                                ms_analysis._vol_file.header.birthdate,
                                                 [current_map])
 
             if self.project == "mactel":    
@@ -1248,7 +1248,7 @@ class RelEZIntensity:
                     
         
                     elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7] = np.nan
+                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7 ] = np.nan
 
                     elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
                     if len(elm_peak) >= 1:
