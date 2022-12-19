@@ -770,7 +770,7 @@ class RelEZIntensity:
                         if visit.date_of_origin > current_map.date_of_origin:
                             continue
                         elif visit.date_of_origin <= current_map.date_of_origin:
-                            self.patients[vol_id].visits.insert(current_map, i)
+                            self.patients[pids[vol_id]].visits.insert(current_map, i)
                             break
                 else:
                     self.patients[pids[vol_id]] = Patient(
