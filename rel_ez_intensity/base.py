@@ -794,7 +794,7 @@ class RelEZIntensity:
                         else:
                             self.patients[pids[vol_id]].visits_OD = [current_map]
                     else:
-                        if len(self.patients[vol_id].visits_OS) > 0:
+                        if len(self.patients[pids[vol_id]].visits_OS) > 0:
                             for i, visit in enumerate(self.patients[pids[vol_id]].visits_OS):
                                 if visit.date_of_origin <= current_map.date_of_origin:
                                     self.patients[pids[vol_id]].visits.insert(current_map, i)
