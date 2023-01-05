@@ -753,7 +753,7 @@ class RelEZIntensity:
                         if self.patients[vol_id].visits_OD:
                             for i, visit in enumerate(self.patients[vol_id].visits_OD):
                                 if visit.date_of_origin <= current_map.date_of_origin:
-                                    self.patients[vol_id].visits.insert(current_map, i)
+                                    self.patients[vol_id].visits_OD.insert(current_map, i)
                                     break
                         else:
                             self.patients[vol_id].visits_OD = [current_map]
@@ -761,7 +761,7 @@ class RelEZIntensity:
                         if self.patients[vol_id].visits_OS:
                             for i, visit in enumerate(self.patients[vol_id].visits_OS):
                                 if visit.date_of_origin <= current_map.date_of_origin:
-                                    self.patients[vol_id].visits.insert(current_map, i)
+                                    self.patients[vol_id].visits_OS.insert(current_map, i)
                                     break
                         else:
                             self.patients[vol_id].visits_OS = [current_map]
@@ -789,7 +789,7 @@ class RelEZIntensity:
                         if self.patients[pids[vol_id]].visits_OD:
                             for i, visit in enumerate(self.patients[pids[vol_id]].visits_OD):
                                 if visit.date_of_origin <= current_map.date_of_origin:
-                                    self.patients[pids[vol_id]].visits.insert(current_map, i)
+                                    self.patients[pids[vol_id]].visits_OD.insert(current_map, i)
                                     break
                         else:
                             self.patients[pids[vol_id]].visits_OD = [current_map]
@@ -797,7 +797,7 @@ class RelEZIntensity:
                         if self.patients[pids[vol_id]].visits_OS:
                             for i, visit in enumerate(self.patients[pids[vol_id]].visits_OS):
                                 if visit.date_of_origin <= current_map.date_of_origin:
-                                    self.patients[pids[vol_id]].visits.insert(current_map, i)
+                                    self.patients[pids[vol_id]].visits_OS.insert(current_map, i)
                                     break
                         else:
                             self.patients[pids[vol_id]].visits_OS = [current_map]
