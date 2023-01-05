@@ -61,12 +61,14 @@ class Patient:
         self,
         pid: Optional[str] = None,
         dob: Optional[str] = None,
-        visits: Optional[List[OCTMap]] = None,
+        visits_OD: Optional[List[OCTMap]] = None,
+        visits_OS: Optional[List[OCTMap]] = None
 
     ) -> None:
         self.pid = pid
         self.dob = dob
-        self.visits = visits 
+        self.visits_OD = visits_OD
+        self.visits_OS = visits_OS
 
     
 
@@ -747,33 +749,74 @@ class RelEZIntensity:
         
                 if vol_id in self.patients.keys():
                 
-                    # not yet tested
-                    for i, visit in enumerate(self.patients[vol_id].visits):
-                        if visit.date_of_origin < current_map.date_of_origin:
-                            continue
-                        if visit.date_of_origin > current_map.date_of_origin:
-                            self.patients[vol_id].visits.insert(current_map, i)
-                            break
+                    if current_map.laterality == "OD":
+                        if len(self.patients[vol_id].visits_OD) > 0:
+                            for i, visit in enumerate(self.patients[vol_id].visits_OD):
+                                if visit.date_of_origin <= current_map.date_of_origin:
+                                    self.patients[vol_id].visits.insert(current_map, i)
+                                    break
+                        else:
+                            self.patients[vol_id].visits_OD = [current_map]
+                    else:
+                        if len(self.patients[vol_id].visits_OS) > 0:
+                            for i, visit in enumerate(self.patients[vol_id].visits_OS):
+                                if visit.date_of_origin <= current_map.date_of_origin:
+                                    self.patients[vol_id].visits.insert(current_map, i)
+                                    break
+                        else:
+                            self.patients[vol_id].visits_OS = [current_map]
+
                 else:
-                    self.patients[vol_id] = Patient(
-                                                vol_id,
-                                                ms_analysis._vol_file.header.birthdate,
-                                                [current_map])
+                    if current_map.laterality == "OD":
+                        self.patients[vol_id] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            [current_map], # visit OD
+                                            None)
+                    else:
+                        self.patients[vol_id] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            None,
+                                            [current_map] # visit OS
+                                            )
 
             if self.project == "mactel":    
         
                 if pids[vol_id] in self.patients.keys():
-                
-                    # not yet tested
-                    for i, visit in enumerate(self.patients[pids[vol_id]].visits):
-                        if visit.date_of_origin <= current_map.date_of_origin:
-                            self.patients[pids[vol_id]].visits.insert(i, current_map)
-                            break
+
+                    if current_map.laterality == "OD":
+                        if len(self.patients[pids[vol_id]].visits_OD) > 0:
+                            for i, visit in enumerate(self.patients[pids[vol_id]].visits_OD):
+                                if visit.date_of_origin <= current_map.date_of_origin:
+                                    self.patients[pids[vol_id]].visits.insert(current_map, i)
+                                    break
+                        else:
+                            self.patients[pids[vol_id]].visits_OD = [current_map]
+                    else:
+                        if len(self.patients[vol_id].visits_OS) > 0:
+                            for i, visit in enumerate(self.patients[pids[vol_id]].visits_OS):
+                                if visit.date_of_origin <= current_map.date_of_origin:
+                                    self.patients[pids[vol_id]].visits.insert(current_map, i)
+                                    break
+                        else:
+                            self.patients[pids[vol_id]].visits_OS = [current_map]
+
                 else:
-                    self.patients[pids[vol_id]] = Patient(
-                                                pids[vol_id],
-                                                ms_analysis._vol_file.header.birthdate_raw,
-                                                [current_map])
+                    if current_map.laterality == "OD":
+                        self.patients[pids[vol_id]] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            [current_map], # visit OD
+                                            None)
+                    else:
+                        self.patients[pids[vol_id]] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            None,
+                                            [current_map] # visit OS
+                                            )
+                
             
                         
     def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
@@ -1419,22 +1462,24 @@ class RelEZIntensity:
             project (str): project name like Macustar
             
         """
-        nos = self.scan_size[1] // self.stackwidth
-        d_a_scan = scan_field[1] / nos
-        d_b_scan = scan_field[0] / self.scan_size[0]
+        nos = self.scan_size[1] // self.stackwidth # number of stacks
+        d_a_scan = scan_field[1] / nos # distance between stacks in degree
+        d_b_scan = scan_field[0] / self.scan_size[0] # distance between b-scans in degree
         a_scan_mesh, b_scan_mesh = np.meshgrid(
                     np.arange(-scan_field[1]/2, scan_field[1]/2,d_a_scan),
                     np.arange(-scan_field[0]/2, scan_field[0]/2,d_b_scan))
-        a_scan_mesh = a_scan_mesh.flatten()
-        b_scan_mesh = b_scan_mesh.flatten()
+        a_scan_mesh = a_scan_mesh.flatten() # serialized a-scan mesh
+        b_scan_mesh = b_scan_mesh.flatten() # serialized a-scan mesh
         
-        b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten()
+        b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number
     
         if project == "macustar micro":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]",
              "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "s stimulus", "s stimulus grid", "m stimulus", "ez", "elm"]
         elif project == "macustar":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
+        elif project == "mactel":
+            header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "ezloss(y/n)", "ez", "elm"]
 
         if os.path.isdir(folder_path):
             workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"),  {'nan_inf_to_errors': True})
@@ -1451,24 +1496,46 @@ class RelEZIntensity:
         
         if project == "macustar micro":
             for i, ids in enumerate(self.patients.keys()):
+
+                if len(self.patients[ids].visits_OD) > 0:
             
-                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                    for j, visit in enumerate(self.patients[ids].visits_OD): # if more than one visit is given, the sheet is extended to the right
                 
-                    worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
-                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
-                    worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
-                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
-                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
-                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
-                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
-                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
-                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
-                    worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
-                    worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
-                    worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
-                    worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
-                    worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
-                    worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
+                        worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
+                        worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
+                        worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
+                        worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
+                        worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
+                        worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
+
+                if len(self.patients[ids].visits_OS) > 0:
+            
+                    for j, visit in enumerate(self.patients[ids].visits_OS): # if more than one visit is given, the sheet is extended to the right
+                
+                        worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
+                        worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
+                        worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
+                        worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
+                        worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
+                        worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
                    
                 row += nos * self.scan_size[0]
             
@@ -1480,20 +1547,43 @@ class RelEZIntensity:
                     row = 1
 
 
-        if project == "macutar":
+        if project == "macutar" or project == "mactel":
             for i, ids in enumerate(self.patients.keys()):
+
+                if len(self.patients[ids].visits_OD) > 0:
             
-                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                    for j, visit in enumerate(self.patients[ids].visits_OD): # if more than one visit is given, the sheet is extended to the right
+                        
+                        if project == "macutar":
+                            worksheet.write(row, j * len(header), ids)
+                        else:
+                            worksheet.write(row, j * len(header), visit.vid)
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+
+                if len(self.patients[ids].visits_OS) > 0:
+            
+                    for j, visit in enumerate(self.patients[ids].visits_OS): # if more than one visit is given, the sheet is extended to the right
                 
-                    worksheet.write(row, j * len(header), ids)
-                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
-                    worksheet.write_column(row, j * len(header) + 2, b_scan_n)
-                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
-                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
-                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
-                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
-                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
-                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+                        
+                        if project == "macutar":
+                            worksheet.write(row, j * len(header), ids)
+                        else:
+                            worksheet.write(row, j * len(header), visit.vid)
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
                    
                 row += nos * self.scan_size[0]
             
@@ -1503,6 +1593,9 @@ class RelEZIntensity:
                     worksheet = workbook.add_worksheet()            
                     worksheet.write_row(0, 0, header)   
                     row = 1
+
+
+
                 
         workbook.close()        
                 
