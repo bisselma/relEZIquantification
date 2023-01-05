@@ -528,7 +528,7 @@ class RelEZIntensity:
                 continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-            fovea_bscan = scan_size[0] - fovea_bscan
+            fovea_bscan = scan_size[0] - fovea_bscan + 1
 
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
@@ -554,9 +554,8 @@ class RelEZIntensity:
             lat = ms_analysis._vol_file.header.scan_position
 
             if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - fovea_ascan
-            else:
-                fovea_ascan = fovea_ascan -1 
+                fovea_ascan = scan_size[1] - fovea_ascan +1
+
 
             # if area_exception is "rpedc" get list of thickness maps 
             if "rpedc" in self.area_exclusion.keys():
@@ -1483,7 +1482,7 @@ class RelEZIntensity:
                     row = 1
 
 
-        if project == "macutar":
+        if project == "macustar":
             for i, ids in enumerate(self.patients.keys()):
             
                 for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
