@@ -755,6 +755,7 @@ class RelEZIntensity:
                                 if visit.date_of_origin <= current_map.date_of_origin:
                                     self.patients[vol_id].visits_OD.insert(i, current_map)
                                     break
+                            self.patients[vol_id].visits_OD.insert(i, current_map)
                         else:
                             self.patients[vol_id].visits_OD = [current_map]
                     else:
@@ -763,6 +764,7 @@ class RelEZIntensity:
                                 if visit.date_of_origin <= current_map.date_of_origin:
                                     self.patients[vol_id].visits_OS.insert(i, current_map)
                                     break
+                            self.patients[vol_id].visits_OS.insert(i, current_map)
                         else:
                             self.patients[vol_id].visits_OS = [current_map]
 
@@ -791,6 +793,7 @@ class RelEZIntensity:
                                 if visit.date_of_origin <= current_map.date_of_origin:
                                     self.patients[pids[vol_id]].visits_OD.insert(i, current_map)
                                     break
+                            self.patients[pids[vol_id]].visits_OD.insert(i, current_map)
                         else:
                             self.patients[pids[vol_id]].visits_OD = [current_map]
                     else:
@@ -799,6 +802,7 @@ class RelEZIntensity:
                                 if visit.date_of_origin <= current_map.date_of_origin:
                                     self.patients[pids[vol_id]].visits_OS.insert(i, current_map)
                                     break
+                            self.patients[pids[vol_id]].visits_OS.insert(i, current_map)
                         else:
                             self.patients[pids[vol_id]].visits_OS = [current_map]
 
