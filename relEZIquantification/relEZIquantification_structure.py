@@ -71,7 +71,7 @@ class Distance_map(OCTmap):
    
 class SSDmap:
     
-    project_name = None 
+    name = None 
 
     ez_ssd_map = None
 
@@ -81,7 +81,7 @@ class SSDmap:
 
     def __new__(
             cls,
-            project_name = None,
+            name = None,
             stackwidth = None,
             ez_ssd_map = None,
             elm_ssd_map = None,
@@ -90,12 +90,12 @@ class SSDmap:
         return object.__new__(cls)
 
     def __init__(self, 
-            project_name: Optional[str] = None, 
+            name: Optional[str] = None, 
             ez_ssd_map: Optional[Distance_map] = None, 
             elm_ssd_map: Optional[Distance_map] = None,
             file_location: Union[str, Path, IO] = None
     ):
-        self.project_name = project_name
+        self.name = name
         self.ez_ssd_map = ez_ssd_map
         self.elm_ssd_map = elm_ssd_map 
         self.file_location = file_location     
@@ -325,7 +325,7 @@ class SSDmap:
 
         # create ssd map containing the created maps
         return cls(
-                project_name = "ssd_" + project_name,
+                name = "ssd_" + project_name,
                 ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(ez_dist,"cubic"), cls.interpolate_map(ez_std,"cubic")),
                 elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(elm_dist,"cubic"), cls.interpolate_map(elm_std,"cubic")),
                 file_location = None
@@ -384,7 +384,7 @@ class Mean_rpedc_map(Distance_map):
 
     def __new__(
             cls,
-            project_name = None,
+            name = None,
             date_of_origin = None,
             scan_size = None,
             scan_field = None,
@@ -396,7 +396,7 @@ class Mean_rpedc_map(Distance_map):
 
     
     def __init__(self, 
-    project_name: Optional[str] = None, 
+    name: Optional[str] = None, 
     date_of_origin: Optional[date] = None, 
     scan_size: Optional[tuple] = None, 
     scan_field: Optional[tuple] = None, 
@@ -404,13 +404,15 @@ class Mean_rpedc_map(Distance_map):
     std_array: Optional[np.ndarray] = None,
     file_location: Union[str, Path, IO] = None
     ):
-        super().__init__(project_name, date_of_origin, scan_size, scan_field, distance_array, std_array)  
+        super().__init__(name, date_of_origin, scan_size, scan_field, distance_array, std_array)  
         self.file_location = file_location 
 
     @classmethod
     def create_mean_rpedc_map(
             cls,
-            folder_path: Union[str, Path, IO] = None,
+            project_name: Optional[str] = None,
+            data_list: Optional[Dict] = None,
+            folder_path: Union[str, Path, IO] = None, # path to get rpedc maps 
             fovea_coords: Optional[Dict] = None,
             scan_size: Optional[tuple] = None,
             scan_field: Optional[tuple] = None
@@ -432,7 +434,12 @@ class Mean_rpedc_map(Distance_map):
                 "vol": if segmentation by .vol-file is used
             *args: file formats that contain the data
         """
-        
+        if not project_name:
+            raise ValueError("Project name not given")
+
+        if not data_list:
+            raise ValueError("Dictionary of data_list not given")
+                   
         if not fovea_coords:
             raise ValueError("Dictionary of fovea coords not given")
 
@@ -492,7 +499,7 @@ class Mean_rpedc_map(Distance_map):
         
         # create and return instance
         return cls(
-                project_name = "mean_rpedc_map",
+                project_name = project_name,
                 date_of_origin = date.today(),
                 scan_size = scan_size,
                 scan_field = scan_field,
