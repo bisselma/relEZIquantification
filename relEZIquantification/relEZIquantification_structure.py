@@ -348,7 +348,7 @@ class SSDmap:
             directory = ""
             
         sdd_file_path = os.path.join(
-                directory, "ssd_" + self.project_name +
+                directory, self.project_name +
                             self.ez_ssd_map.date_of_origin.strftime("%Y-%m-%d") 
                             + ".pkl")
         
@@ -358,9 +358,8 @@ class SSDmap:
         self.file_location = sdd_file_path
 
 
-    @classmethod
     def load_ssd(
-            cls,
+            self,
             directory: Union[str, Path, IO, None] = None,
             filename: Optional[str] = None
             ):
@@ -376,9 +375,9 @@ class SSDmap:
                     with open(file, 'rb') as inp:
                         tmp_obj = pickle.load(inp)
                         if type(tmp_obj) is SSDmap:
-                            return cls(**tmp_obj.__dict__) # Initialization based on the loaded instance         
+                            return tmp_obj # Initialization based on the loaded instance         
         else:
-            raise ValueError("No directory to load ssd maps is given\n Try to create ssd first by method 'create_ssd_maps()'")
+            raise ValueError("No directory to load ssd maps is given\n Try to create ssd first by method 'create_ssd_maps()' and than save it by save_ssd_maps()")
 
 class Mean_rpedc_map(Distance_map):
 
@@ -386,7 +385,7 @@ class Mean_rpedc_map(Distance_map):
 
     def __new__(
             cls,
-            name = None,
+            project_name = None,
             date_of_origin = None,
             scan_size = None,
             scan_field = None,
@@ -398,7 +397,7 @@ class Mean_rpedc_map(Distance_map):
 
     
     def __init__(self, 
-    name: Optional[str] = None, 
+    project_name: Optional[str] = None, 
     date_of_origin: Optional[date] = None, 
     scan_size: Optional[tuple] = None, 
     scan_field: Optional[tuple] = None, 
@@ -406,7 +405,7 @@ class Mean_rpedc_map(Distance_map):
     std_array: Optional[np.ndarray] = None,
     file_location: Union[str, Path, IO] = None
     ):
-        super().__init__(name, date_of_origin, scan_size, scan_field, distance_array, std_array)  
+        super().__init__(project_name, date_of_origin, scan_size, scan_field, distance_array, std_array)  
         self.file_location = file_location 
 
     @classmethod
@@ -451,19 +450,19 @@ class Mean_rpedc_map(Distance_map):
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
             
         # get all rpedc maps
-        rpedc_dict = ut.get_rpedc_list(folder_path)
+        rpedc_list = ut.get_rpedc_list(folder_path)
         
         # get vol_data to determin laterality
-        data_dict = ut.get_vol_list(folder_path)
+        data_list = ut.get_vol_list(folder_path)
         
         
         rpedc_thickness = np.empty(shape=[0, 640, scan_size[1]])
         
-        for ids in rpedc_dict.keys():
+        for ids in rpedc_list.keys():
             if ids in fovea_coords.keys():
 
                 # load map
-                maps = cv2.imread(rpedc_dict[ids], flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)).astype(float)
+                maps = cv2.imread(rpedc_list[ids], flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH)).astype(float)
                                 
                 
                 
@@ -474,7 +473,7 @@ class Mean_rpedc_map(Distance_map):
                 fovea_bscan = scan_size[0] - (fovea_bscan -1) 
 
                 # laterality 
-                vol_data = ep.Oct.from_heyex_vol(data_dict[ids])
+                vol_data = ep.Oct.from_heyex_vol(data_list[ids])
                 lat = vol_data._meta["ScanPosition"]
 
                 if lat == "OS": # if left eye is processed
@@ -529,9 +528,8 @@ class Mean_rpedc_map(Distance_map):
                 
             self.file_location = mrpedc_file_path
 
-    @classmethod
     def load_mean_rpedc_map(
-            cls,
+            self,
             directory: Union[str, Path, IO, None] = None,
             filename: Optional[str] = None
             ):
@@ -546,7 +544,7 @@ class Mean_rpedc_map(Distance_map):
                     with open(file, 'rb') as inp:
                         tmp_obj = pickle.load(inp)
                         if type(tmp_obj) is Mean_rpedc_map:
-                            return cls(**tmp_obj.__dict__) # Initialization based on the loaded instance                 
+                            return tmp_obj # Initialization based on the loaded instance                 
         else:
             raise ValueError("No directory to load mean_rpedc_map maps is given\n Try to create mean_rpedc_map first by method 'create_mean_rpedc_map()'")            
 
