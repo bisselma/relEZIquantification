@@ -69,7 +69,7 @@ class RelEZIQuantification:
         self._rel_EZI_data.ssd_maps.save_ssd(*args)
 
     def load_ssd(self, *args):
-        self._rel_EZI_data.ssd_maps(SSDmap.load_ssd(*args))
+        self._rel_EZI_data.ssd_maps = SSDmap.load_ssd(*args)
 
 
     # managing mean_rpedc maps 
@@ -80,7 +80,7 @@ class RelEZIQuantification:
         self._rel_EZI_data.mean_rpedc_map.save_mean_rpedc_map(*args)
 
     def load_mean_rpedc_map(self, *args):
-        self._rel_EZI_data.mean_rpedc_map(Mean_rpedc_map.load_mean_rpedc_map(*args))
+        self._rel_EZI_data.mean_rpedc_map = Mean_rpedc_map.load_mean_rpedc_map(*args)
 
 
     # analyse project data to get relEZI_maps
