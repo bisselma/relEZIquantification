@@ -286,7 +286,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         stackwidth: Optional[int] = None, 
         ssd_maps: Optional[SSDmap] = None, 
         mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
-        patients: Optional[Dict[Patient]] = {}
+        patients: Optional[Dict] = {}
         ):
         super().__init__(data_folder, project_name, fovea_coords, scan_size, scan_field, stackwidth, ssd_maps, mean_rpedc_map, patients)
 
