@@ -291,25 +291,13 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         super().__init__(data_folder, project_name, fovea_coords, scan_size, scan_field, stackwidth, ssd_maps, mean_rpedc_map, patients)
 
 
-    def get_list(self):
-        if not os.path.exists(self.data_folder):
-            raise NotADirectoryError("directory: " +  self.data_folder + " not exist")
+    def get_list(self, *args):
 
-        path_list = {}
+        if args:
+            data_folder = args[0]
+        else:
+            data_folder = self.data_folder
 
-        dir_list = os.listdir(self.data_folder)
-        for dir in dir_list:
-            full_path = os.path.join(self.data_folder, dir)
-            if os.path.isdir(full_path):
-                dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-            if os.path.isfile(full_path) and full_path.endswith(".vol"):
-                pid = full_path.split("\\")[-2].split("_")[1][4:]
-                path_list[pid] = full_path        
-
-        return path_list
-
-
-    def get_list(self, data_folder): # to get data_list by extern folder path
         if not os.path.exists(data_folder):
             raise NotADirectoryError("directory: " +  data_folder + " not exist")
 
@@ -325,6 +313,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 path_list[pid] = full_path        
 
         return path_list
+
 
     def create_relEZI_maps(        
         self,
