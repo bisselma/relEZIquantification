@@ -492,7 +492,7 @@ class Mean_rpedc_map(Distance_map):
         
         # create and return instance
         return cls(
-                name = "mean_rpedc_map",
+                project_name = "mean_rpedc_map",
                 date_of_origin = date.today(),
                 scan_size = scan_size,
                 scan_field = scan_field,
@@ -517,7 +517,7 @@ class Mean_rpedc_map(Distance_map):
                 directory = ""
                 
             mrpedc_file_path = os.path.join(
-                    directory, "mean_rpedc_" +
+                    directory, self.project_name + "_" + 
                                 self.mean_rpedc_map.date_of_origin.strftime("%Y-%m-%d") 
                                 + ".pkl")
             
