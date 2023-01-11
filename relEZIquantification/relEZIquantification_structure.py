@@ -348,7 +348,7 @@ class SSDmap:
             directory = ""
             
         sdd_file_path = os.path.join(
-                directory, "ssd_" + self.project +
+                directory, "ssd_" + self.project_name +
                             self.ez_ssd_map.date_of_origin.strftime("%Y-%m-%d") 
                             + ".pkl")
         
