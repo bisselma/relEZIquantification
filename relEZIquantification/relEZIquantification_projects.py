@@ -27,9 +27,9 @@ from rel_ez_intensity.getAdjacencyMatrix import plot_layers
 from rel_ez_intensity.seg_core import get_retinal_layers
 from rel_ez_intensity import utils as ut
 
-from relEZIquantification_structure import *
-from relEZIquantification_os import *
-from relEZIquantification_utils import *
+from relEZIquantification.relEZIquantification_structure import *
+from relEZIquantification.relEZIquantification_os import *
+from relEZIquantification.relEZIquantification_utils import *
 
 
 

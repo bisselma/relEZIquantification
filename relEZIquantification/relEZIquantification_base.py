@@ -27,7 +27,7 @@ from relEZIquantification.getAdjacencyMatrix import plot_layers
 from relEZIquantification.seg_core import get_retinal_layers
 from relEZIquantification import utils as ut
 
-from relEZIquantification_projects import *
+from relEZIquantification.relEZIquantification_projects import *
 
 class RelEZIQuantification:
 
