@@ -3,10 +3,10 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 
-from rel_ez_intensity.seg_utils import Layer, get_flatten_seg
-import rel_ez_intensity.utils as sh
-from rel_ez_intensity.getAdjacencyMatrix import get_adjacency_matrix, plot_layers
-from rel_ez_intensity.getAdjacencyMatrix import (get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind,
+from relEZIquantification.seg_utils import Layer, get_flatten_seg
+import relEZIquantification.utils as sh
+from relEZIquantification.getAdjacencyMatrix import get_adjacency_matrix, plot_layers
+from relEZIquantification.getAdjacencyMatrix import (get_adjacency_matrix, sparse_matrix, find_shortest_path, get_path, sub2ind,
     ind2sub)
 
 

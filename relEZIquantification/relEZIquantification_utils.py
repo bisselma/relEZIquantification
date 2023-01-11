@@ -15,13 +15,16 @@ from matplotlib.colors import ListedColormap
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import shift
 from scipy.interpolate import griddata
+from scipy.signal import find_peaks
 import eyepy as ep
 from PIL import Image
 
 
-from rel_ez_intensity import superretina  
-from rel_ez_intensity.superretina.model.super_retina import SuperRetina
-from rel_ez_intensity.superretina.common.common_util import pre_processing, simple_nms, remove_borders, sample_keypoint_desc
+from relEZIquantification import superretina  
+from relEZIquantification.superretina.model.super_retina import SuperRetina
+from relEZIquantification.superretina.common.common_util import pre_processing, simple_nms, remove_borders, sample_keypoint_desc
+
+from relEZIquantification_structure import *
 
 # global config data for superretina
 model_image_width = 768
@@ -91,256 +94,163 @@ grid_iamd = {
 }
 
 
-def get_microperimetry(
-        df,
-        pid: str = None,
-        visit: int = None,
-        laterality: str = None,
-        mode: str = None):
+def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
+        
+        
+        # What to do if 2 peaks are found in the search 
+            # Suggested to set the value to invalid. !!!
 
-    idx = np.where(df["UNIQUE_ID"] == pid + "-V" + str(visit) + "-" + laterality + "-" + mode)[0]
-    if len(idx) == 1:
-        data = df.loc[idx[0]]
-    else:
-        return None 
+        if np.isnan([ez_mean, ez_std, elm_mean, elm_std]).any():
+            return 0, 0
 
-    micro = np.array(data[
-            np.logical_and(
-                np.arange(0,len(data)) > 25,
-                np.logical_and(
-                    np.arange(0,len(data)) < 25 + 2 * 33,
-                    np.arange(0,len(data)) % 2 == 0)
-                    )].array._ndarray)
-
-    micro[micro == "<0"] = -1
-
-    return micro 
-
-def get_microperimetry_IR_image_list(
-     folder_path: Union[str, Path, IO] = None,
-    ) -> Optional[Dict]:
-
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-    return_list_m = {}
-    return_list_s = {}
+        # find ez and elm peaks
+        left_border = int(np.round(rpe_peak - elm_mean - 2. * elm_std))
+        peaks = left_border + find_peaks(i_profile[left_border : int(rpe_peak)])[0]
+                        
+        if 2 * ez_std < 1:
+            ez_left = int(np.round(rpe_peak - ez_mean - 1))
+            ez_right = int(np.round(rpe_peak - ez_mean + 1))
+        else:
+            ez_left = int(np.round(rpe_peak - ez_mean - 2. * ez_std)) 
+            ez_right = int(np.round(rpe_peak - ez_mean + 2. * ez_std)) 
+                        
+        
+        ez_peaks = peaks[np.logical_and(peaks >= ez_left, peaks <= ez_right)]
 
 
-    dir_list = os.listdir(folder_path)
-    for dir in dir_list:
-        full_path = os.path.join(folder_path, dir)
-        if os.path.isdir(full_path):
-            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".png"):
-            pid = full_path.split("\\")[-1].split("_")[1] + "-" + full_path.split("\\")[-1].split("_")[2] 
-
-            if full_path.split("\\")[-1].split("_")[5][0] == "m":
-                return_list_m[pid] = full_path
-            else:
-                return_list_s[pid] = full_path
-
-    return return_list_m, return_list_s
-
-def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
-
-            # create binary image with iamd grid 
-            if stimuli is None:
-                return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
-            else:
-                mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
-                stimuli_map = np.full_like(mask_iamd, np.nan)
-
-            # get microperimetry IR image m and s
-            img1_raw = cv2.imread(ir_path,0)
-            (h_micro, w_micro) = img1_raw.shape[:2]
-
-            # rotated IR image 
-            (cX, cY) = (w_micro // 2, h_micro // 2)
-            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
-            img1_raw = cv2.warpAffine(img1_raw, M, (w_micro, h_micro))
-
-            # flip microperimetry-IR image
-            if lat == "OS":
-                img1_raw = np.flip(img1_raw, 1)
-
-            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
-            offset = int((h_micro/36) * 3)
-            img1 = img1_raw[offset:-offset,offset:-offset]
-            img1 = cv2.resize(img1,slo_img.shape)
-
-
-
-            # calculate affine transformation matrix A
-            H = get2DProjectiveTransformationMartix_by_SuperRetina(img1, slo_img)
+        # 3 possible cases 
+        # first: no peak was found
+        if len(ez_peaks) == 0:
+            return 0, 0
+        # second: the estimated valid case where only a single peaks was found 
+        elif len(ez_peaks) == 1:
+            ez_peak = ez_peaks[0]
+        # third: invalid case if more then one peak was found
+        else:
+            return 0, 0
+        
         
 
-            # transform grid
-            grid_coords = np.zeros((3,len(x)))
-            grid_coords[0,:] = x
-            grid_coords[1,:] = y
-            grid_coords[2,:] = np.ones((1,len(x)))
-
-            grid_coords_transf = H @ grid_coords
-
-
-            x_new = (grid_coords_transf[0,:] * (30/ 768)) 
-            y_new = ((grid_coords_transf[1,:] - 64) * (25 / 640))
-
-            
-            yy,xx = np.mgrid[:241,:(768 // stackwidth)]
-
-            xx = xx * (30/(768 // stackwidth))
-            yy = yy * (25/241)
-
-            for idx in range(33):            
-                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx + 1
-                stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
-
-
-            return mask_iamd, stimuli_map
-
-
-def get_id_by_file_path(
-    file_path: Optional[str] = None,
-    ) -> Optional[str]:
-    return file_path.split("\\")[-1].split(".")[0]
-
-def get_list_by_format(
-    folder_path: Union[str, Path, IO] = None,
-    formats: Optional[tuple] = None,
-    ) -> Optional[Dict]:
-
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-
-    return_list = {}
-
-    if formats:
-        for tmp_format in list(formats):
-            
-            if tmp_format == ".vol":
-                dir_list = os.listdir(folder_path)
-                tmp_dict = {}          
-                for dir in dir_list:               
-                    full_path = os.path.join(folder_path, dir)
-                    if os.path.isdir(full_path):
-                        dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-                    if os.path.isfile(full_path) and full_path.endswith(tmp_format):
-                        tmp_dict[full_path.split("\\")[-2].split("_")[1][4:]] = full_path                      
-                return_list[tmp_format] = tmp_dict
+        if 2 * elm_std < 1:
+            elm_left = int(np.round(rpe_peak - elm_mean - 1))
+            elm_right = int(np.round(rpe_peak - elm_mean + 1))
+        else:
+            elm_left = int(np.round(rpe_peak - elm_mean - 2. * elm_std)) 
+            if ez_peak <= int(np.round(rpe_peak - elm_mean + 2. * elm_std)):
+                elm_right = ez_peaks -1 
             else:
-                dir_list = os.listdir(folder_path)
-                tmp_list = []
-                for dir in dir_list:               
-                    full_path = os.path.join(folder_path, dir)
-                    if os.path.isdir(full_path):
-                        dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-                    if os.path.isfile(full_path) and full_path.endswith(tmp_format):
-                        tmp_list.append(full_path)                     
-                return_list[tmp_format] = tmp_list               
+                elm_right = int(np.round(rpe_peak - elm_mean + 2. * elm_std)) 
+        
+                        
+        elm_peaks = peaks[np.logical_and(peaks >= elm_left, peaks <= elm_right)]
+         
+        # 3 possible cases 
+        # first: no peak was found
+        if len(elm_peaks) == 0:
+            return ez_peak, 0
+        # second: the estimated valid case where only one peaks was found 
+        elif len(elm_peaks) == 1:
+            elm_peak = elm_peaks[0]
+        # third: invalid case if more then one peak was found
+        else:
+            return ez_peak, 0
             
-    return return_list
+        return ez_peak, elm_peak
 
-def get_vol_list(
-    folder_path: Union[str, Path, IO] = None,
-    project: str = None
-    ):
+def get_rpe_peak(self, raw_roi, seg_mask_roi, start_r, i, stackwidth):
+    rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+    rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
+    seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
 
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-    path_list = {}
-    vid_list = {}
-
-
-    dir_list = os.listdir(folder_path)
-    for dir in dir_list:
-        full_path = os.path.join(folder_path, dir)
-        if os.path.isdir(full_path):
-            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".vol"):
-            if project == "macustar":
-                pid = full_path.split("\\")[-2].split("_")[1][4:]
-                path_list[pid] = full_path
-            elif project == "mactel":
-                pid = full_path.split("\\")[-1].split("_")[-1].split(".")[0]   
-                path_list[pid] = full_path  
-                vid_list[pid] =  full_path.split("\\")[-4]         
-    return path_list, vid_list
-            
-def get_rpedc_list(
-    folder_path: Union[str, Path, IO] = None,
-    ) -> Optional[Dict]:
-
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-    return_list = {}
+    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+    if len(rpe_peak) >= 1:
+        return rpe_peak[-1]
+    else:
+        return None
 
 
-    dir_list = os.listdir(folder_path)
-    for dir in dir_list:
-        full_path = os.path.join(folder_path, dir)
-        if os.path.isdir(full_path):
-            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".tif") and "RPEDC_thickness-map" in full_path:
-            return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
-    return return_list
+def get_rpedc_map(
+    self,
+    file_path: Union[str, Path, IO] = None,
+    scan_size: Optional[tuple] = None,
+    mean_rpedc: Optional[Mean_rpedc_map] = None,
+    laterality: Optional[str] = None,
+    translation: Optional[tuple] = None
+    ) -> np.ndarray:
 
-def get_rpd_list(
-    folder_path: Union[str, Path, IO] = None,
-    ) -> Optional[Dict]:
+    translation[0] = int(640./241.) * translation[0]
+        
+    maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
+        
+    if laterality == "OS":
+        maps = np.flip(maps, 1)
 
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-    return_list = {}
-
-
-    dir_list = os.listdir(folder_path)
-    for dir in dir_list:
-        full_path = os.path.join(folder_path, dir)
-        if os.path.isdir(full_path):
-            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith(".zip"):
-            return_list[full_path.split("\\")[-1].split("_")[1][4:]] = full_path
-    return return_list
-
-def get_mask_list(
-    folder_path: Union[str, Path, IO] = None,
-    ) -> Optional[Dict]:
-
-    if not os.path.exists(folder_path):
-        raise NotADirectoryError("directory: " +  folder_path + " not exist")
-
-    return_list = {}
-    current_id = None
-    tmp_mask_list = []
+    atrophy = maps  == 0.
+        
+    maps_shifted = shift(maps, translation)
+    atrophy_shifted = shift(atrophy, translation).astype(np.uint8)
+        
+    # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
+    sub = maps_shifted - (mean_rpedc.octmap["mean"] + (3. * mean_rpedc.octmap["std"])) 
 
 
-    dir_list = os.listdir(folder_path)
-    for dir in dir_list:
-        full_path = os.path.join(folder_path, dir)
-        if os.path.isdir(full_path):
-            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
-        if os.path.isfile(full_path) and full_path.endswith("png") and "\\masks" in full_path:
-           if current_id is None:
-               current_id = full_path.split("_")[-4][4:] 
-               tmp_mask_list.append(full_path)
-           else:
-               if current_id != full_path.split("_")[-4][4:]:
-                   tmp_mask_list.sort(key=lambda x: int(x.split('-')[-1].split('.')[0])) 
-                   return_list[current_id] = tmp_mask_list[::-1]
-                   current_id = full_path.split("_")[-4][4:]
-                   tmp_mask_list = [full_path]
-               else:
-                   tmp_mask_list.append(full_path)
+    sub = np.logical_or(sub > 0., maps_shifted <= 0.01).astype(np.uint8) # rpedc area
+        
+    sub_resized = cv2.resize(sub, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
+    atrophy_resized = cv2.resize(atrophy_shifted, scan_size[::-1], cv2.INTER_LINEAR)
     
-    tmp_mask_list.sort(key=lambda x: int(x.split('-')[-1].split('.')[0])) 
-    return_list[current_id] = tmp_mask_list[::-1]
-    return return_list
+    # structure element should have a radius of 100 um (Macustar-format (
+    # ~30 um per bscan => ~ 3 px in y-direction and 2 * 3 px to get size of rectangle in y-dir. 
+    # ~ 10 um per ascan => ~ 10 px in x-direction and 2 * 10 px to get size of rectangle in x-dir. 
+    struct = np.ones((4, 10), dtype=bool)
+    sub_dilation = binary_dilation(sub_resized, structure = struct).astype(int) * 2 # rpedc condition =2 
+    atrophy_dilation = binary_dilation(atrophy_resized, structure = struct)   
+        
+    sub_dilation[atrophy_dilation] = 1 # atrophy condition =1
+
+    return sub_dilation  
+    
+def get_rpd_map(
+    self,
+    file_path: Union[str, Path, IO] = None,
+    scan_size: Optional[tuple] = None,
+    laterality: Optional[str] = None,
+    translation: Optional[tuple] = None
+    ) -> np.ndarray:
+
+    roi = read_roi_zip(file_path)
+    roi = list(roi.values())[0]
+        
+    def get_annotated_mask(roi, shape):
+        x = np.array(roi['x'])
+        y = np.array(roi['y'])
+    
+        x -= 1
+        y -= 1
+    
+        mask = np.zeros(shape, dtype = int)
+    
+        mask = cv2.fillPoly(mask, pts=[np.array([x,y]).transpose()], color = 1)
+    
+        return mask.astype(bool)
+
+        
+    # get mask by annotation
+    SHAPE = (640, 768) # !!!!! Should be dependent on the recording format of oct
+    mask = get_annotated_mask(roi, SHAPE)
+
+    # if left eye the map is flipped
+    if laterality == "OS":
+        mask = np.flip(mask, 1)
+        
+    # shift the fovea in the center
+    mask_shifted = shift(mask, translation).astype(np.uint8)
+
+    # resize to scan conditions
+    mask_resized = cv2.resize(mask_shifted, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
+
+    return mask_resized
+
 
 def get_seg_by_mask(mask_path, n):
     """
@@ -532,6 +442,92 @@ def get2DRigidTransformationMatrix(p, q):
         [np.sin(alpha), np.cos(alpha), r[3,0]]])
 
     return R 
+
+
+def get_microperimetry(
+        df,
+        pid: str = None,
+        visit: int = None,
+        laterality: str = None,
+        mode: str = None):
+
+    idx = np.where(df["UNIQUE_ID"] == pid + "-V" + str(visit) + "-" + laterality + "-" + mode)[0]
+    if len(idx) == 1:
+        data = df.loc[idx[0]]
+    else:
+        return None 
+
+    micro = np.array(data[
+            np.logical_and(
+                np.arange(0,len(data)) > 25,
+                np.logical_and(
+                    np.arange(0,len(data)) < 25 + 2 * 33,
+                    np.arange(0,len(data)) % 2 == 0)
+                    )].array._ndarray)
+
+    micro[micro == "<0"] = -1
+
+    return micro 
+
+
+
+def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
+
+            # create binary image with iamd grid 
+            if stimuli is None:
+                return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
+            else:
+                mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
+                stimuli_map = np.full_like(mask_iamd, np.nan)
+
+            # get microperimetry IR image m and s
+            img1_raw = cv2.imread(ir_path,0)
+            (h_micro, w_micro) = img1_raw.shape[:2]
+
+            # rotated IR image 
+            (cX, cY) = (w_micro // 2, h_micro // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
+            img1_raw = cv2.warpAffine(img1_raw, M, (w_micro, h_micro))
+
+            # flip microperimetry-IR image
+            if lat == "OS":
+                img1_raw = np.flip(img1_raw, 1)
+
+            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
+            offset = int((h_micro/36) * 3)
+            img1 = img1_raw[offset:-offset,offset:-offset]
+            img1 = cv2.resize(img1,slo_img.shape)
+
+
+
+            # calculate affine transformation matrix A
+            H = get2DProjectiveTransformationMartix_by_SuperRetina(img1, slo_img)
+        
+
+            # transform grid
+            grid_coords = np.zeros((3,len(x)))
+            grid_coords[0,:] = x
+            grid_coords[1,:] = y
+            grid_coords[2,:] = np.ones((1,len(x)))
+
+            grid_coords_transf = H @ grid_coords
+
+
+            x_new = (grid_coords_transf[0,:] * (30/ 768)) 
+            y_new = ((grid_coords_transf[1,:] - 64) * (25 / 640))
+
+            
+            yy,xx = np.mgrid[:241,:(768 // stackwidth)]
+
+            xx = xx * (30/(768 // stackwidth))
+            yy = yy * (25/241)
+
+            for idx in range(33):            
+                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx + 1
+                stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
+
+
+            return mask_iamd, stimuli_map
 
 def sample_circle(x,y, radius, field, no_dc_ratio):
     yy,xx = np.mgrid[:field.shape[0], :field.shape[1]]
