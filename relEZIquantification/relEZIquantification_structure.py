@@ -143,13 +143,12 @@ class SSDmap:
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
         """
-        
+
+        if not data_list:
+            raise ValueError("Dictionary of data_list not given")
+
         if not fovea_coords:
             raise ValueError("Dictionary of fovea coords not given")
-
-        if not project:
-            print("No project was given. The default project is <macustar>")
-            project = "macustar"
 
         if not scan_size:
             raise ValueError("Scan_size (tuple) of recording not given")
