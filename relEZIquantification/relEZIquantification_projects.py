@@ -278,17 +278,17 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
     def __init__(
         self, 
-        data_folder: Optional[Path] = None, 
-        project_name: Optional[str] = None, 
-        fovea_coords: Optional[Dict] = None, 
-        scan_size: Optional[tuple] = None, 
-        scan_field: Optional[tuple] = None, 
-        stackwidth: Optional[int] = None, 
-        ssd_maps: Optional[SSDmap] = None, 
-        mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
-        patients: Optional[Dict] = {}
+        _data_folder: Optional[Path] = None, 
+        _project_name: Optional[str] = None, 
+        _fovea_coords: Optional[Dict] = None, 
+        _scan_size: Optional[tuple] = None, 
+        _scan_field: Optional[tuple] = None, 
+        _stackwidth: Optional[int] = None, 
+        _ssd_maps: Optional[SSDmap] = None, 
+        _mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
+        _patients: Optional[Dict] = {}
         ):
-        super().__init__(data_folder, project_name, fovea_coords, scan_size, scan_field, stackwidth, ssd_maps, mean_rpedc_map, patients)
+        super().__init__(_data_folder, _project_name, _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
 
 
     def get_list(self, *args):
@@ -634,3 +634,5 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 class RelEZIQuantificationMactel(RelEZIQuantificationBase):
     pass
+
+
