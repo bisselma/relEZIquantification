@@ -71,7 +71,7 @@ class Distance_map(OCTmap):
    
 class SSDmap:
     
-    name = None 
+    project_name = None 
 
     ez_ssd_map = None
 
@@ -81,7 +81,7 @@ class SSDmap:
 
     def __new__(
             cls,
-            name = None,
+            project_name = None,
             stackwidth = None,
             ez_ssd_map = None,
             elm_ssd_map = None,
@@ -90,12 +90,12 @@ class SSDmap:
         return object.__new__(cls)
 
     def __init__(self, 
-            name: Optional[str] = None, 
+            project_name: Optional[str] = None, 
             ez_ssd_map: Optional[Distance_map] = None, 
             elm_ssd_map: Optional[Distance_map] = None,
             file_location: Union[str, Path, IO] = None
     ):
-        self.name = name
+        self.project_name = project_name
         self.ez_ssd_map = ez_ssd_map
         self.elm_ssd_map = elm_ssd_map 
         self.file_location = file_location     
@@ -122,6 +122,7 @@ class SSDmap:
     @classmethod
     def create_ssd_maps(
         cls,
+        project_name: Optional[str] = None,
         data_list: Optional[Dict] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
@@ -132,6 +133,7 @@ class SSDmap:
 
         """
         Args:
+            project (Optional[str] = None): project name
             data_list (Optional[Dict]): file dict where files are stored
             fovea_coords (Optional[Dict]): location of fovea
                 !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
@@ -143,6 +145,8 @@ class SSDmap:
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
         """
+        if not project_name:
+            raise ValueError("Project name not given")
 
         if not data_list:
             raise ValueError("Dictionary of data_list not given")
@@ -321,7 +325,7 @@ class SSDmap:
 
         # create ssd map containing the created maps
         return cls(
-                name = "ssd" + project,
+                name = "ssd" + project_name,
                 ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, stackwidth, cls.interpolate_map(ez_dist,"cubic"), cls.interpolate_map(ez_std,"cubic")),
                 elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, stackwidth, cls.interpolate_map(elm_dist,"cubic"), cls.interpolate_map(elm_std,"cubic")),
                 file_location = None
@@ -344,7 +348,7 @@ class SSDmap:
             directory = ""
             
         sdd_file_path = os.path.join(
-                directory, "ssd_" +
+                directory, "ssd_" + self.project +
                             self.ez_ssd_map.date_of_origin.strftime("%Y-%m-%d") 
                             + ".pkl")
         
