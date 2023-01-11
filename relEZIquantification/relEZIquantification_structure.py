@@ -325,7 +325,7 @@ class SSDmap:
 
         # create ssd map containing the created maps
         return cls(
-                name = "ssd" + project_name,
+                project_name = "ssd" + project_name,
                 ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(ez_dist,"cubic"), cls.interpolate_map(ez_std,"cubic")),
                 elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(elm_dist,"cubic"), cls.interpolate_map(elm_std,"cubic")),
                 file_location = None
