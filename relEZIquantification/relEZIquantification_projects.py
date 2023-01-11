@@ -74,7 +74,7 @@ class RelEZIQuantificationBase:
         stackwidth: Optional[int] = None,
         ssd_maps: Optional[SSDmap] = None, 
         mean_rpedc_map: Optional[Mean_rpedc_map] = None,
-        patients: Optional[Dict[Patient]] = {},
+        patients: Optional[Dict] = {},
         
  
             
