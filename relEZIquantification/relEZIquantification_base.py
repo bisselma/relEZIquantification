@@ -49,8 +49,21 @@ class RelEZIQuantification:
     
     
     # managing ssd maps 
-    def create_ssd_maps(self, *args):
-        self._rel_EZI_data.ssd_maps = SSDmap.create_ssd_maps(*args)
+    def create_ssd_maps(self, data_folder, *args):
+        """
+        Args:
+            data_folder (Union[str, Path, IO]): folder path where files are stored
+            fovea_coords (Optional[Dict]): location of fovea
+                !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
+                bscan (int): Number of B-scan including fovea
+                ascan (int): Number of A-scan including fovea
+            scan_size (Optional[tuple]): scan field size in x and y direction
+                x (int): Number of B-scans
+                y (int): Number of A-scans
+            stackwidth (Optional[int]): number of columns for a single profile
+            ref_layer (Optional[str]): layer to flatten the image 
+        """
+        self._rel_EZI_data.ssd_maps = SSDmap.create_ssd_maps(self._rel_EZI_data.get_list(data_folder), *args)
 
     def save_ssd(self, *args):
         self._rel_EZI_data.ssd_maps.save_ssd(*args)

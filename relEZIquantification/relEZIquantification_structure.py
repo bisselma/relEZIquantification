@@ -122,8 +122,7 @@ class SSDmap:
     @classmethod
     def create_ssd_maps(
         cls,
-        folder_path: Union[str, Path, IO] = None,
-        project: Optional[str] = None,
+        data_list: Optional[Dict] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field:Optional[tuple] = None,
@@ -133,7 +132,7 @@ class SSDmap:
 
         """
         Args:
-            folder_path (Union[str, Path, IO]): folder path where files are stored
+            data_list (Optional[Dict]): file dict where files are stored
             fovea_coords (Optional[Dict]): location of fovea
                 !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
                 bscan (int): Number of B-scan including fovea
@@ -143,7 +142,6 @@ class SSDmap:
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
-            *args: file formats that contain the data
         """
         
         if not fovea_coords:
@@ -173,17 +171,6 @@ class SSDmap:
                 raise ValueError("Layer name for reference layer not vaild")
 
 
-
-        # data directories
-        if project:
-            if project == "macustar":
-                data_dict, _ = ut.get_vol_list(folder_path, project)
-            elif project == "mactel":
-                data_dict, _ = ut.get_vol_list(folder_path, project)
-
-            raise ValueError("no project name is given")
-
-
         # central bscan/ascan, number of stacks (nos)
         c_bscan = scan_size[0] // 2 + scan_size[0] % 2
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
@@ -194,7 +181,7 @@ class SSDmap:
 
         
         # iterate  over .vol-list
-        for vol_id in data_dict:
+        for vol_id in data_list:
 
             # current distance map
             curr_ez_distance = np.empty((1, scan_size[0], nos))
@@ -215,7 +202,7 @@ class SSDmap:
             
             # get data
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                vol_file_path=data_dict[vol_id],
+                vol_file_path=data_list[vol_id],
                 model_file_path=None,
                 use_gpu=True,
                 cuda_device=0,

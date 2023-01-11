@@ -308,6 +308,24 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
         return path_list
 
+
+    def get_list(self, data_folder): # to get data_list by extern folder path
+        if not os.path.exists(data_folder):
+            raise NotADirectoryError("directory: " +  data_folder + " not exist")
+
+        path_list = {}
+
+        dir_list = os.listdir(data_folder)
+        for dir in dir_list:
+            full_path = os.path.join(data_folder, dir)
+            if os.path.isdir(full_path):
+                dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+            if os.path.isfile(full_path) and full_path.endswith(".vol"):
+                pid = full_path.split("\\")[-2].split("_")[1][4:]
+                path_list[pid] = full_path        
+
+        return path_list
+
     def create_relEZI_maps(        
         self,
         data_folder: Union[str, Path, IO] = None,
