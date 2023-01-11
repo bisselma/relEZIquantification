@@ -100,6 +100,25 @@ class SSDmap:
         self.elm_ssd_map = elm_ssd_map 
         self.file_location = file_location     
 
+    
+    def interpolate_map(array,method): #method to fill the gaps of the distance and std maps
+
+        x = np.arange(0, array.shape[1])
+        y = np.arange(0, array.shape[0])
+        #mask invalid values
+        array = np.ma.masked_invalid(array)
+        xx, yy = np.meshgrid(x, y)
+        #get only the valid values
+        x1 = xx[~array.mask]
+        y1 = yy[~array.mask]
+        newarr = array[~array.mask]
+
+        from scipy import interpolate
+        GD1 = interpolate.griddata((x1, y1), newarr.ravel(),
+                          (xx, yy),
+                             method=method)
+        return GD1
+
     @classmethod
     def create_ssd_maps(
         cls,
@@ -317,8 +336,8 @@ class SSDmap:
         # create ssd map containing the created maps
         return cls(
                 name = "ssd" + project,
-                ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, stackwidth, ez_dist, ez_std),
-                elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, stackwidth, ez_dist, ez_std),
+                ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, stackwidth, cls.interpolate_map(ez_dist,"cubic"), cls.interpolate_map(ez_std,"cubic")),
+                elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, stackwidth, cls.interpolate_map(elm_dist,"cubic"), cls.interpolate_map(elm_std,"cubic")),
                 file_location = None
         )
 

@@ -16,6 +16,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 from scipy.ndimage import shift
 from scipy.interpolate import griddata
 from scipy.signal import find_peaks
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
 import eyepy as ep
 from PIL import Image
 
