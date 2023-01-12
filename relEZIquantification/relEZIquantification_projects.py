@@ -66,8 +66,8 @@ class RelEZIQuantificationBase:
 
     def __init__(
         self,
-        data_folder: Optional[Path] = None,
         project_name: Optional[str] = None,
+        data_folder: Optional[Path] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
@@ -79,8 +79,8 @@ class RelEZIQuantificationBase:
  
             
         ):
-        self._data_folder = data_folder
         self._project_name = project_name
+        self._data_folder = data_folder
         self._fovea_coords = fovea_coords
         self._scan_size = scan_size
         self._scan_field = scan_field
@@ -88,15 +88,14 @@ class RelEZIQuantificationBase:
         self._ssd_maps = ssd_maps
         self._mean_rpedc_map = mean_rpedc_map
         self._patients = patients
-         
+
+    @property
+    def project_name(self):
+        return self._project_name        
 
     @property
     def data_folder(self):
         return self._data_folder
-    
-    @property
-    def project_name(self):
-        return self._project_name
     
     @property
     def fovea_coords(self):
@@ -162,7 +161,6 @@ class RelEZIQuantificationBase:
     def check_args(
         self,
         data_folder: Union[str, Path, IO] = None,
-        project_name: Optional[str] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
@@ -178,11 +176,11 @@ class RelEZIQuantificationBase:
         else:
             self._data_folder = data_folder
 
-        if not project_name: # project_name
-            if not self.project_name:
-                raise ValueError("No project_name. Add one of the following project names:\macustar\nmicro\nmactel") # should be updated if new project is available
+        if not self.project_name: # project_name
+            raise ValueError("No project_name. Add one of the following project names:\macustar\nmicro\nmactel") # should be updated if new project is available
         else:
-            self._project_name = project_name
+            print("No project_name given. Use 'macustar' as default")
+            self._project_name = "macustar"
 
         if not fovea_coords: # fovea_coords
             if not self.fovea_coords:
@@ -318,7 +316,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
     def create_relEZI_maps(        
         self,
         data_folder: Union[str, Path, IO] = None,
-        project_name: Optional[str] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
@@ -330,7 +327,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         """
         Args:
             folder_path (Union[str, Path, IO]): folder path where files are stored
-            project (Optional[str]): project name 
             fovea_coords (Optional[Dict]): location of fovea
                 !!! B-scan number counted from bottom to top like HEYEX !!! -> easier handling for physicians
                 bscan (int): Number of B-scan including fovea
@@ -348,7 +344,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         """
 
         # raise expection if at least on argument is incorrect. Set instance variables.
-        self.check_args(data_folder, project_name, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
+        self.check_args(data_folder, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
 
         # get a dict structure containing the data in the shape <"ID":"path + .format">
         data_list = self.get_list()
