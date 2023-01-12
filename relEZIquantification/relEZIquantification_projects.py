@@ -365,8 +365,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                         raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
                 if exclusion_type == "rpd":
                     ae_dict_2 = ut.get_rpd_list(self.data_folder)
-                    if len(ae_dict_2.keys()) == 0:
-                        raise ValueError("If rpd maps should be considered the data must be in the same folder as the other data")
 
 
         # central bscan/ascan, number of stacks (nos)
