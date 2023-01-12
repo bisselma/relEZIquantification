@@ -143,7 +143,7 @@ class RelEZIQuantificationBase:
     def mean_rpedc_map(self):
         return self._mean_rpedc_map 
 
-    @ssd_maps.setter
+    @mean_rpedc_map.setter
     def mean_rpedc_map(self, value):
         self._mean_rpedc_map = value 
 
