@@ -191,7 +191,7 @@ def get_rpedc_map(
     atrophy_shifted = shift(atrophy, translation).astype(np.uint8)
         
     # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
-    sub = maps_shifted - (mean_rpedc.octmap["mean"] + (3. * mean_rpedc.octmap["std"])) 
+    sub = maps_shifted - (mean_rpedc.distance_array + (3. * mean_rpedc.std_array)) 
 
 
     sub = np.logical_or(sub > 0., maps_shifted <= 0.01).astype(np.uint8) # rpedc area
