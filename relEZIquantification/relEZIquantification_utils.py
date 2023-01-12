@@ -171,7 +171,6 @@ def get_rpe_peak(self, raw_roi, seg_mask_roi, start_r, i, stackwidth):
 
 
 def get_rpedc_map(
-    self,
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
     mean_rpedc: Optional[Mean_rpedc_map] = None,
@@ -212,7 +211,6 @@ def get_rpedc_map(
     return sub_dilation  
     
 def get_rpd_map(
-    self,
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
     laterality: Optional[str] = None,
@@ -221,6 +219,8 @@ def get_rpd_map(
 
     roi = read_roi_zip(file_path)
     roi = list(roi.values())[0]
+
+    translation[0] = int(640./scan_size[0]) * translation[0]
         
     def get_annotated_mask(roi, shape):
         x = np.array(roi['x'])
