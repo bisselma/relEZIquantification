@@ -414,7 +414,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             # get rpedc map if rpedc exclusion is considered
             if "rpedc" in area_exclusion.keys():
                 if vol_id in ae_dict_1.keys():
-                    rpedc_map = get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, d_bscan, d_ascan)
+                    rpedc_map = get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion.keys():
                         exclusion_dict["atrophy"] = rpedc_map == 2
                         self.update_header(-2, "atrophy(y/n)")
@@ -427,7 +427,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             # get rpd map if rpd exclusion is considered
             if "rpd" in area_exclusion.keys():
                 if vol_id in ae_dict_2.keys():
-                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
+                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (d_bscan, d_ascan))
                 else:
                     print("ID: %s considered rpd map not exist" % vol_id)
                     exclusion_dict["rpd"] = np.zeros(self.scan_size).astype(bool)
