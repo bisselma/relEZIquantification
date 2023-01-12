@@ -210,8 +210,8 @@ class RelEZIQuantificationBase:
                 self.ref_layer = 10
             elif ref_layer == "BM" or ref_layer == 11:
                 pass # the value 11 is given by default 
-            else:
-                raise ValueError("layer name or number for reference layer not valid ")
+        else:
+            raise ValueError("layer name or number for reference layer not valid ")
 
         if not area_exclusion: # exclusion_dict
             print("No area_exclusion. Dict of the shape <{'exclusion type': boolean}> was expected. Exclusion  types are:\nrpedc, atrophy, rpd, ezloss\nThe default condition is used")
@@ -348,17 +348,17 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         data_list = self.get_list()
 
         # get lists of exclusion data
-        if len(self.area_exclusion) == 1:
-            if "rpedc" in self.area_exclusion.keys():
+        if len(area_exclusion) == 1:
+            if "rpedc" in area_exclusion.keys():
                 ae_dict_1 = get_rpedc_list(self.data_folder)
                 if len(ae_dict_1.keys()) == 0:
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
-            if "rpd" in self.area_exclusion.keys():
+            if "rpd" in area_exclusion.keys():
                 ae_dict_2 = get_rpd_list(self.data_folder)
                 if len(ae_dict_2.keys()) == 0:
                     raise ValueError("If rpd maps should be considered the data must be in the same folder as the other data")
         else: 
-            for exclusion_type in self.area_exclusion.keys():
+            for exclusion_type in area_exclusion.keys():
                 if exclusion_type == "rpedc":
                     ae_dict_1 = ut.get_rpedc_list(self.data_folder)
                 if len(ae_dict_1.keys()) == 0:
