@@ -348,7 +348,7 @@ class SSDmap:
             directory = ""
             
         sdd_file_path = os.path.join(
-                directory, self.project_name + "_" +
+                directory, self.name + "_" +
                             self.ez_ssd_map.date_of_origin.strftime("%Y-%m-%d") 
                             + ".pkl")
         
@@ -521,7 +521,7 @@ class Mean_rpedc_map(Distance_map):
                 directory = ""
                 
             mrpedc_file_path = os.path.join(
-                    directory, self.project_name + "_" + 
+                    directory, self.name + "_" + 
                                 self.mean_rpedc_map.date_of_origin.strftime("%Y-%m-%d") 
                                 + ".pkl")
             
