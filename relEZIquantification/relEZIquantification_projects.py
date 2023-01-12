@@ -492,7 +492,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
   
                         # get rpe peak
-                        rpe_peak = self.get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, self.stackwidth)
+                        rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, self.stackwidth)
 
                         if not rpe_peak:
                             continue
