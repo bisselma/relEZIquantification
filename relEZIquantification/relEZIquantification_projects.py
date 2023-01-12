@@ -171,56 +171,56 @@ class RelEZIQuantificationBase:
         ):
         # argument control section
         if not data_folder: # project_name
-            if not self.data_folder:
+            if not self._data_folder:
                 raise ValueError("No data folder. Directory where project data are stored is requiered") # should be updated if new project is available
         else:
             self._data_folder = data_folder
 
-        if not self.project_name: # project_name
+        if not self._project_name: # project_name
             raise ValueError("No project_name. Add one of the following project names:\macustar\nmicro\nmactel") # should be updated if new project is available
         else:
             print("No project_name given. Use 'macustar' as default")
             self._project_name = "macustar"
 
         if not fovea_coords: # fovea_coords
-            if not self.fovea_coords:
+            if not self._fovea_coords:
                 raise ValueError("No fovea_coords. Dict of the shape <'ID': (bscan, ascan)> was expected")
         else:
             self._fovea_coords = fovea_coords   
 
         if not scan_size: # scan_size
-            if not self.scan_size:
+            if not self._scan_size:
                 raise ValueError("No scan_size. Tuple of shap <(number of bscans, number of ascans)> was expected")
         else:
             self._scan_size =  scan_size           
 
         if not scan_field: # scan_field
-            if not self.scan_field:
+            if not self._scan_field:
                 raise ValueError("No scan_field. Tuple of shap <( y-direction in degree (bscan), x-direction in degree (ascan))> was expected")
         else:
             self._scan_field = scan_field 
 
 
         if not stackwidth: # stackwidth
-            if not self.stackwidth:
+            if not self._stackwidth:
                 raise ValueError("No stackwidth. Integer higher 0 was expected")
         else:
             self._stackwidth = stackwidth                   
    
         if ref_layer:
             if ref_layer == "RPE" or ref_layer == 10:
-                self.ref_layer(10)
+                self.ref_layer = 10
             elif ref_layer == "BM" or ref_layer == 11:
-                pass # the value is gven by default 
+                pass # the value 11 is given by default 
             else:
                 raise ValueError("layer name or number for reference layer not valid ")
 
         if not area_exclusion: # exclusion_dict
             print("No area_exclusion. Dict of the shape <{'exclusion type': boolean}> was expected. Exclusion  types are:\nrpedc, atrophy, rpd, ezloss\nThe default condition is used")
-            self.exclusion_dict({"default": True})
+            self._exclusion_dict({"default": True})
  
 
-        if not self.ssd_maps:
+        if not self._ssd_maps:
             raise ValueError("Site specific distance maps not given")
 
     def get_exclusion_map(
