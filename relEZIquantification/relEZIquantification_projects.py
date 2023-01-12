@@ -355,8 +355,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
             if "rpd" in area_exclusion.keys():
                 ae_dict_2 = get_rpd_list(self.data_folder)
-                if len(ae_dict_2.keys()) == 0:
-                    raise ValueError("If rpd maps should be considered the data must be in the same folder as the other data")
         else: 
             for exclusion_type in area_exclusion.keys():
                 if exclusion_type == "rpedc":
