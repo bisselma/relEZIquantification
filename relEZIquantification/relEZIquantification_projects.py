@@ -551,14 +551,12 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
     def create_excel_sheets(
         self,
         folder_path,
-        n,
-        scan_field,
+        n
         ):
         """
         Args:
             folder_path (str): Target folder for data
             n (int): Number of visits per sheet
-            scan_field (int, int): Scan field in degree
             project (str): project name like Macustar
             
         """
@@ -589,7 +587,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         header_length = len(self.header)
 
         for i, ids in enumerate(self.patients.keys()):
-            for visit in self.patients[ids]: 
+            for visit in self.patients.visits[ids]: 
                 for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
 
                         # standard entries
