@@ -177,9 +177,7 @@ class RelEZIQuantificationBase:
             self._data_folder = data_folder
 
         if not self._project_name: # project_name
-            raise ValueError("No project_name. Add one of the following project names:\macustar\nmicro\nmactel") # should be updated if new project is available
-        else:
-            print("No project_name given. Use 'macustar' as default")
+            print("No project_name. \nAdd one of the following project names:\macustar\nmicro\nmactel\n'macustar' is used as default")
             self._project_name = "macustar"
 
         if not fovea_coords: # fovea_coords
