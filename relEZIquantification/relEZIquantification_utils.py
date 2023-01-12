@@ -95,7 +95,7 @@ grid_iamd = {
 }
 
 
-def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
+def get_ez_elm_peak(i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
         
         
         # What to do if 2 peaks are found in the search 
@@ -158,7 +158,7 @@ def get_ez_elm_peak(self, i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_st
             
         return ez_peak, elm_peak
 
-def get_rpe_peak(self, raw_roi, seg_mask_roi, start_r, i, stackwidth):
+def get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth):
     rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
     rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
     seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
