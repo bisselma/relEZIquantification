@@ -276,8 +276,8 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
     def __init__(
         self, 
+        _project_name: Optional[str] = None,
         _data_folder: Optional[Path] = None, 
-        _project_name: Optional[str] = None, 
         _fovea_coords: Optional[Dict] = None, 
         _scan_size: Optional[tuple] = None, 
         _scan_field: Optional[tuple] = None, 
@@ -286,7 +286,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         _mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
         _patients: Optional[Dict] = {}
         ):
-        super().__init__(_data_folder, _project_name, _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
+        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
 
 
     def get_list(self, *args):
