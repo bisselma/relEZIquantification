@@ -553,9 +553,9 @@ class Mean_rpedc_map(Distance_map):
 
 class RelEZI_map(OCTmap):
 
-    volfile_path = None
+    _volfile_path = None
 
-    stackwidth = None
+    _stackwidth = None
     
     _laterality = None
 
@@ -583,13 +583,13 @@ class RelEZI_map(OCTmap):
         excluded_maps: Optional[Dict] = None
         ):
         super().__init__(name, date_of_origin, scan_size, scan_field)
-        self.stackwidth = stackwidth
-        self.volfile_path = volfile_path
-        self.laterality = laterality
-        self.fovea_coordinates = fovea_coordinates
-        self.ezi_map = ezi_map
-        self.elmi_map = elmi_map
-        self.excluded_maps = excluded_maps
+        self._stackwidth = stackwidth
+        self._volfile_path = volfile_path
+        self._laterality = laterality
+        self._fovea_coordinates = fovea_coordinates
+        self._ezi_map = ezi_map
+        self._elmi_map = elmi_map
+        self._excluded_maps = excluded_maps
 
     @property
     def laterality(self):

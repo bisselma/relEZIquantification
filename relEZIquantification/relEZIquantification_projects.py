@@ -221,7 +221,7 @@ class RelEZIQuantificationBase:
         if not self._ssd_maps:
             raise ValueError("Site specific distance maps not given")
 
-    def get_exclusion_map(
+    def get_exclusion_value(
         self,
         idx_w,
         start_r,
@@ -487,8 +487,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                         # condition seg_mask_area 10 and 11 thickness over stackwidth not higher 15
 
                     else:
-                        if self.get_exclusion_map(idx_w, start_r, i):
-                            excl[start_w + i] = self.get_exclusion_map(idx_w, start_r, i)
+                        excl[start_w + i] = self.get_exclusion_value(idx_w, start_r, i)
 
   
                         # get rpe peak
