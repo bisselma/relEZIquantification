@@ -455,11 +455,8 @@ class Mean_rpedc_map(Distance_map):
         c_bscan = scan_size[0] // 2 + scan_size[0] % 2
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
             
-        # get all rpedc maps
+        # get list of all rpedc maps
         rpedc_list = ut.get_rpedc_list(folder_path)
-        
-        # get vol_data to determin laterality
-        data_list = ut.get_vol_list(folder_path)
         
         
         rpedc_thickness = np.empty(shape=[0, 640, scan_size[1]])
