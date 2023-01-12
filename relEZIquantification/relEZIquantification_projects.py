@@ -416,9 +416,9 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 if vol_id in ae_dict_1.keys():
                     rpedc_map = get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion.keys():
-                        exclusion_dict["atrophy"] = rpedc_map == 2
+                        exclusion_dict["atrophy"] = rpedc_map == 1
                         self.update_header(-2, "atrophy(y/n)")
-                    exclusion_dict["rpedc"] = rpedc_map == 1
+                    exclusion_dict["rpedc"] = rpedc_map == 2
                     self.update_header(-2, "druse(y/n)")
                 else:
                     print("ID: %s considered rpedc map not exist" % vol_id)
