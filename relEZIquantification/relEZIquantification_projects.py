@@ -451,10 +451,10 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.ez_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.ez_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
-                self.elm_distance_map.octmap["distance"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.elm_distance_map.octmap["std"][max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.ssd_maps.ez_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.ssd_maps.ez_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                self.ssd_maps.elm_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
+                self.ssd_maps.elm_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write 
                 range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])), # read
                 range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
                 ):
