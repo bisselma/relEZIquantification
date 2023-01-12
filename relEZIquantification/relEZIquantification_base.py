@@ -74,7 +74,7 @@ class RelEZIQuantification:
 
     # managing mean_rpedc maps 
     def create_mean_rpedc_map(self, data_folder, *args):
-        self._rel_EZI_data.mean_rpedc_map = Mean_rpedc_map.create_mean_rpedc_map(self.project_name, self._rel_EZI_data.get_list(data_folder), *args)
+        self._rel_EZI_data.mean_rpedc_map = Mean_rpedc_map.create_mean_rpedc_map(self.project_name, self._rel_EZI_data.get_list(data_folder), data_folder, *args)
 
     def save_mean_rpedc_map(self, *args):
         self._rel_EZI_data.mean_rpedc_map.save_mean_rpedc_map(*args)
