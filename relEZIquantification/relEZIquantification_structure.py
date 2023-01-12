@@ -325,7 +325,7 @@ class SSDmap:
 
         # create ssd map containing the created maps
         return cls(
-                name = "ssd_" + project_name,
+                name = "ssd_map_" + project_name,
                 ez_ssd_map = Distance_map("ez_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(ez_dist,"cubic"), cls.interpolate_map(ez_std,"cubic")),
                 elm_ssd_map = Distance_map("elm_ssd", date.today(), scan_size, scan_field, cls.interpolate_map(elm_dist,"cubic"), cls.interpolate_map(elm_std,"cubic")),
                 file_location = None
@@ -473,14 +473,14 @@ class Mean_rpedc_map(Distance_map):
                 fovea_bscan, fovea_ascan = fovea_coords[ids]
                     
                 # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-                fovea_bscan = scan_size[0] - (fovea_bscan -1) 
+                fovea_bscan = scan_size[0] - (fovea_bscan +1) 
 
                 # laterality 
                 vol_data = ep.Oct.from_heyex_vol(data_list[ids])
                 lat = vol_data._meta["ScanPosition"]
 
                 if lat == "OS": # if left eye is processed
-                    fovea_ascan = scan_size[1] - (fovea_ascan -1)
+                    fovea_ascan = scan_size[1] - (fovea_ascan +1)
                     maps = np.flip(maps, 1)
                 else:
                     fovea_ascan = fovea_ascan -1
@@ -496,7 +496,7 @@ class Mean_rpedc_map(Distance_map):
         
         # create and return instance
         return cls(
-                project_name = project_name,
+                name = "mean_rpedc_map_" + project_name,
                 date_of_origin = date.today(),
                 scan_size = scan_size,
                 scan_field = scan_field,
