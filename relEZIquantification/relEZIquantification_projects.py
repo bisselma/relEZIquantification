@@ -154,7 +154,7 @@ class RelEZIQuantificationBase:
     def header(self):
         return self._header
 
-    def update_header(self, value, idx):
+    def update_header(self, idx, value):
         self._header.insert(idx, value)
 
 
