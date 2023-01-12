@@ -178,7 +178,7 @@ def get_rpedc_map(
     translation: Optional[tuple] = None
     ) -> np.ndarray:
 
-    translation[0] = int(640./241.) * translation[0]
+    translation = (int(640./scan_size[0]) * translation[0], translation[1])  
         
     maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
         
@@ -220,8 +220,8 @@ def get_rpd_map(
     roi = read_roi_zip(file_path)
     roi = list(roi.values())[0]
 
-    translation[0] = int(640./scan_size[0]) * translation[0]
-        
+    translation = (int(640./scan_size[0]) * translation[0], translation[1])   
+
     def get_annotated_mask(roi, shape):
         x = np.array(roi['x'])
         y = np.array(roi['y'])
