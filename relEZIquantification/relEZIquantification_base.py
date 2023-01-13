@@ -49,7 +49,17 @@ class RelEZIQuantification:
         else:
             raise ValueError("The project name is no correct or not yet implemented\nThe existing project names are:\nmacustar\nmicro\nmactel")
     
-    
+
+    # get fovea coords by excel file of shape (first_column = "Patient ID", second column = "Fovea B-Scan", third column = "Fovea A-Achse")
+    @staticmethod
+    def get_fovea_coords(path):
+        df = pd.read_excel(path)
+        fovea_coords = {}
+        for ids, bscan, ascan in zip(df["Patient ID"],df["Fovea B-Scan"],df["Fovea A-Achse"]):
+            fovea_coords[ids] = (bscan, ascan)
+        
+        return fovea_coords
+
     # managing ssd maps 
     def create_ssd_maps(self, data_folder, *args):
         """
@@ -140,6 +150,9 @@ class RelEZIQuantification:
                             return tmp_obj # Initialization based on the loaded instance         
         else:
             raise ValueError("No directory to load relEZI_maps is given\n Try to create relEZI_maps first by method 'create_relEZI_maps()' and than save it by save_relEZI_maps()")
+    
+
+
     @property
     def relEZI_maps(self):
         """The relEZI_maps property."""
