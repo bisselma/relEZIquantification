@@ -33,6 +33,8 @@ class RelEZIQuantification:
 
     project_name = ""
 
+    file_location = None
+
     _rel_EZI_data = None # return of calculate_relEZI_maps() is stored here
 
     def __init__(self, project_name: Optional[str] = None):
@@ -87,6 +89,57 @@ class RelEZIQuantification:
     def create_relEZI_maps(self, *args):
         self._rel_EZI_data.create_relEZI_maps(*args)
 
+
+    def save_relEZI_maps(
+            self,
+            directory: Union[str, Path, IO, None] = None
+            ):
+        
+        """
+        Args:
+            directory (Union[str, Path, IO, None]): directory where RelEZIQuantification object should be stored        
+        """
+        
+        if not self._rel_EZI_data:
+            ValueError("RelEZIQuantification object no exist. First use create_relEZI_maps()")
+
+
+        if not directory:
+            directory = ""
+            
+        relEZI_maps_file_path = os.path.join(
+                directory, "relEZI_maps_" + self.project_name + "_" +
+                            date.today().strftime("%Y-%m-%d") 
+                            + ".pkl")
+        
+        with open(relEZI_maps_file_path, "wb") as outp:
+            pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
+            
+        self.file_location = relEZI_maps_file_path
+
+
+    def load_relEZI_maps(
+            self,
+            directory: Union[str, Path, IO, None] = None,
+            filename: Optional[str] = None
+            ):
+        
+        if not filename:
+            filename = "relEZI_maps"
+
+        if self.file_location:
+            directory = self.file_location
+            
+        if directory:
+            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            for file in obj_list[".pkl"]:
+                if filename in file:
+                    with open(file, 'rb') as inp:
+                        tmp_obj = pickle.load(inp)
+                        if type(tmp_obj) is RelEZIQuantification:
+                            return tmp_obj # Initialization based on the loaded instance         
+        else:
+            raise ValueError("No directory to load relEZI_maps is given\n Try to create relEZI_maps first by method 'create_relEZI_maps()' and than save it by save_relEZI_maps()")
     @property
     def relEZI_maps(self):
         """The relEZI_maps property."""

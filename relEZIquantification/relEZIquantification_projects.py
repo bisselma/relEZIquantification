@@ -247,16 +247,18 @@ class RelEZIQuantificationBase:
 
         return binary_number
 
-    def add(self, map, pid, visitdate): # if patient allready exists
-        self.patients[pid].add(map, visitdate)
+    def add(self, map, pid, visitdate, *args): # if patient allready exists
+        if args: # new patient
+            if map.laterality == "OD":
+                self.patients[pid] = Patient(pid, args[0], Visit(None, visitdate, map, None))
+            elif  map.laterality == "OS": 
+                self.patients[pid] = Patient(pid, args[0], Visit(None, visitdate, None, map))
+            else:
+                raise ValueError("Map attribute 'laterality' is not correct") 
+        else: # add visit to patient object
+            self.patients[pid].add(map, visitdate)
 
-    def add(self, map, pid, visitdate, birthdate): # if patient is new
-        if map.laterality == "OD":
-            self.patients[pid] = Patient(pid, birthdate, Visit(None, visitdate, map, None))
-        elif  map.laterality == "OS": 
-            self.patients[pid] = Patient(pid, birthdate, Visit(None, visitdate, None, map))
-        else:
-            raise ValueError("Map attribute 'laterality' is not correct") 
+
            
 
     def get_list(self):
