@@ -633,7 +633,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
 
 
-    def get_list(self, data_folder: Optional[str] = None):
+    def get_list(self, *args):
 
         if not data_folder:
             data_folder = self.data_folder

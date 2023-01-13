@@ -6,7 +6,7 @@ from setuptools import find_packages, setup
 
 __author__ = """Ben Isselmann"""
 __email__ = "ben.isselmann@gmail.com"
-__version__ = "0.0.1063"
+__version__ = "0.0.1064"
 
 
 #with open("README.rst") as readme_file:
