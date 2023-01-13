@@ -290,8 +290,10 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
     def get_list(self, *args):
 
-        if not data_folder:
+        if not args:
             data_folder = self.data_folder
+        else:
+            data_folder = args[0]
 
         if not os.path.exists(data_folder):
             raise NotADirectoryError("directory: " +  data_folder + " not exist")
