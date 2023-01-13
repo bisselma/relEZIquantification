@@ -42,7 +42,7 @@ class RelEZIQuantification:
 
         if self.project_name == "macustar":
             self._rel_EZI_data = RelEZIQuantificationMacustar(self.project_name)
-        elif self._project_name == "micro":
+        elif self.project_name == "micro":
                 self._rel_EZI_data = RelEZIQuantificationMicro(self.project_name)
         elif self.project_name == "mactel":
                 self._rel_EZI_data = RelEZIQuantificationMactel(self.project_name)
