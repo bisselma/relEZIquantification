@@ -349,22 +349,18 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         # get a dict structure containing the data in the shape <"ID":"path + .format">
         data_list = self.get_list()
 
-        # get lists of exclusion data
-        if len(area_exclusion) == 1:
-            if "rpedc" in area_exclusion.keys():
-                ae_dict_1 = get_rpedc_list(self.data_folder)
+        # get lists of exclusion data 
+        for exclusion_type in area_exclusion.keys():
+            if exclusion_type == "rpedc":
+                ae_dict_1 = ut.get_rpedc_list(self.data_folder)
+                self.update_header(-2, "druse(y/n)") 
+                if "atrophy" in area_exclusion.keys():
+                    self.update_header(-2, "atrophy(y/n)")
                 if len(ae_dict_1.keys()) == 0:
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
-            if "rpd" in area_exclusion.keys():
-                ae_dict_2 = get_rpd_list(self.data_folder)
-        else: 
-            for exclusion_type in area_exclusion.keys():
-                if exclusion_type == "rpedc":
-                    ae_dict_1 = ut.get_rpedc_list(self.data_folder)
-                    if len(ae_dict_1.keys()) == 0:
-                        raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
-                if exclusion_type == "rpd":
-                    ae_dict_2 = ut.get_rpd_list(self.data_folder)
+            if exclusion_type == "rpd":
+                ae_dict_2 = ut.get_rpd_list(self.data_folder)
+                self.update_header(-2, "rpd(y/n)")
 
 
         # central bscan/ascan, number of stacks (nos)
@@ -419,9 +415,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                     rpedc_map = get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion.keys():
                         exclusion_dict["atrophy"] = rpedc_map == 1
-                        self.update_header(-2, "atrophy(y/n)")
                     exclusion_dict["rpedc"] = rpedc_map == 2
-                    self.update_header(-2, "druse(y/n)")
                 else:
                     print("ID: %s considered rpedc map not exist" % vol_id)
                     continue
@@ -433,7 +427,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 else:
                     print("ID: %s considered rpd map not exist" % vol_id)
                     exclusion_dict["rpd"] = np.zeros(self.scan_size).astype(bool)
-                    self.update_header(-2, "rpd(y/n)")
 
             
             # check if given number of b scans match with pre-defined number 
