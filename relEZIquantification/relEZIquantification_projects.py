@@ -596,7 +596,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                         worksheet.write(row, k * header_length, "313" + "".join(i for i in ids.split("-"))) # ID
                         worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
                         worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
-                        worksheet.write(row, k * header_length + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                        worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
                         worksheet.write_column(row, k * header_length + 4, a_scan_mesh) # A-scan
                         worksheet.write_column(row, k * header_length + 5, b_scan_mesh) # B-scan
                         worksheet.write_column(row, k * header_length + header_length -2, map.ezi_map.flatten())
