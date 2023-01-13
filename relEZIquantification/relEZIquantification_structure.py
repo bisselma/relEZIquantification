@@ -664,7 +664,7 @@ class Patient:
 
     day_of_birth = None 
 
-    visits = []
+    visits = None
 
     def __init__(
         self,
@@ -674,10 +674,7 @@ class Patient:
         ):
         self.pid = pid
         self.day_of_birth = day_of_birth
-        if visits:
-            self.visits.append(visits)
-        else:
-            self.visits = [visits]
+        self.visits = [visits]
 
     def add(self, map: Optional[RelEZI_map] = None, visitdate: Optional[date] = None):
 
