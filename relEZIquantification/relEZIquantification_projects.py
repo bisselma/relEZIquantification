@@ -589,7 +589,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         header_length = len(self.header)
 
         for i, ids in enumerate(self.patients.keys()):
-            for visit in self.patients[ids].visits[ids]: 
+            for visit in self.patients[ids].visits: 
                 for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
 
                         # standard entries
