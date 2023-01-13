@@ -115,7 +115,7 @@ class RelEZIQuantification:
         with open(relEZI_maps_file_path, "wb") as outp:
             pickle.dump(self, outp, pickle.HIGHEST_PROTOCOL)
             
-        self.file_location = relEZI_maps_file_path
+        self.file_location = directory
 
 
     def load_relEZI_maps(

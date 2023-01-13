@@ -519,7 +519,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
             tmp_excluded_dict = {}
 
-            for idx, exclusion_type in enumerate(exclusion_dict):
+            for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
                 tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
                 curr_excluded = curr_excluded % 2**idx
                          
