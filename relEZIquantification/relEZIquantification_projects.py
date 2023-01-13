@@ -612,7 +612,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         workbook.close()
 
 class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
-    pass
+    pass 
 
 class RelEZIQuantificationMactel(RelEZIQuantificationBase):
     
@@ -951,11 +951,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
         workbook.close()
 
-class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
-    pass
 
-class RelEZIQuantificationMactel(RelEZIQuantificationBase):
-    pass
+
 
 
 
