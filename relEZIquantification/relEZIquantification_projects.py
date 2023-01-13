@@ -604,7 +604,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
                         # additional entries
                         for idx, ex_type in enumerate(map.excluded_maps.values()):
-                            worksheet.write_column(row, k * header_length + 5 + idx, ex_type.flatten()) # exclusion type is added to the sheet
+                            worksheet.write_column(row, k * header_length + 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
 
                 row += nos * self.scan_size[0]
