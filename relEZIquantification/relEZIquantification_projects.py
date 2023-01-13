@@ -154,9 +154,6 @@ class RelEZIQuantificationBase:
     def header(self):
         return self._header
 
-    def update_header(self, idx, value):
-        self._header = self._header.copy().insert(idx, value)
-
 
     def check_args(
         self,
@@ -353,14 +350,14 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         for exclusion_type in area_exclusion.keys():
             if exclusion_type == "rpedc":
                 ae_dict_1 = ut.get_rpedc_list(self.data_folder)
-                self.update_header(-2, "druse(y/n)") 
+                self._header.insert(-2, "druse(y/n)") 
                 if "atrophy" in area_exclusion.keys():
-                    self.update_header(-2, "atrophy(y/n)")
+                    self._header.insert(-2, "atrophy(y/n)")
                 if len(ae_dict_1.keys()) == 0:
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
             if exclusion_type == "rpd":
                 ae_dict_2 = ut.get_rpd_list(self.data_folder)
-                self.update_header(-2, "rpd(y/n)")
+                self._header.insert(-2, "rpd(y/n)")
 
 
         # central bscan/ascan, number of stacks (nos)
