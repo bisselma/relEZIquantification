@@ -75,7 +75,7 @@ class RelEZIQuantification:
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
         """
-        self._rel_EZI_data.ssd_maps = SSDmap.create_ssd_maps(self.project_name, self._rel_EZI_data.get_list(), *args)
+        self._rel_EZI_data.ssd_maps = SSDmap.create_ssd_maps(self.project_name, self._rel_EZI_data.get_list(data_folder), *args)
 
     def save_ssd(self, *args):
         self._rel_EZI_data.ssd_maps.save_ssd(*args)

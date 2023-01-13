@@ -261,9 +261,7 @@ class RelEZIQuantificationBase:
             self.patients[pid].add(map, visitdate)
 
 
-           
-
-    def get_list(self):
+    def get_list(self, *args):
         pass
 
     def create_relEZI_maps(self):
