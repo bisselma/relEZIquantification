@@ -676,6 +676,8 @@ class Patient:
         self.day_of_birth = day_of_birth
         if visits:
             self.visits.append(visits)
+        else:
+            self.visits = [visits]
 
     def add(self, map: Optional[RelEZI_map] = None, visitdate: Optional[date] = None):
 
