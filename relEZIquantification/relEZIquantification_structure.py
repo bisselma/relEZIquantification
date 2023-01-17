@@ -23,9 +23,8 @@ import eyepy as ep
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
 
-from relEZIquantification.getAdjacencyMatrix import plot_layers
-from relEZIquantification.seg_core import get_retinal_layers
-from relEZIquantification import utils as ut
+from relEZIquantification.relEZIquantification_os import *
+from relEZIquantification.relEZIquantification_utils import *
 
 
 class OCTmap(object):
@@ -250,7 +249,7 @@ class SSDmap:
                 
 
                 # get rois
-                raw_roi, seg_mask_roi = ut.get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
+                raw_roi, seg_mask_roi = get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
                 
 
                 for i in range(n_st):
@@ -368,7 +367,7 @@ class SSDmap:
             
             
         if directory:
-            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            obj_list = get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
                 if filename in file:
                     with open(file, 'rb') as inp:

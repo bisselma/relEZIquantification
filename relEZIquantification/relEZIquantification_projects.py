@@ -367,7 +367,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         c_ascan = self.scan_size[1] // 2 + self.scan_size[1] % 2
         nos = self.scan_size[1] // self.stackwidth # number of stacks
 
-        for vol_id in data_list:
+        for vid in data_list:
 
             # current distance map/ exclusion map
             curr_ez_intensity = np.zeros((scan_size[0], nos))
@@ -377,9 +377,9 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
             try:
-                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+                fovea_bscan, fovea_ascan = fovea_coords[vid]
             except:
-                print("ID %s is missing in Fovea List " % vol_id)
+                print("ID %s is missing in Fovea List " % vid)
                 continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
@@ -392,7 +392,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # get data from vol-file
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                vol_file_path=data_list[vol_id],
+                vol_file_path=data_list[vid],
                 model_file_path=None,
                 use_gpu=True,
                 cuda_device=0,
@@ -410,32 +410,32 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # get rpedc map if rpedc exclusion is considered
             if "rpedc" in area_exclusion.keys():
-                if vol_id in ae_dict_1.keys():
-                    rpedc_map = get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
+                if vid in ae_dict_1.keys():
+                    rpedc_map = get_rpedc_map(ae_dict_1[vid], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion.keys():
                         exclusion_dict["atrophy"] = rpedc_map == 1
                     exclusion_dict["rpedc"] = rpedc_map == 2
                 else:
-                    print("ID: %s considered rpedc map not exist" % vol_id)
+                    print("ID: %s considered rpedc map not exist" % vid)
                     continue
             
             # get rpd map if rpd exclusion is considered
             if "rpd" in area_exclusion.keys():
-                if vol_id in ae_dict_2.keys():
-                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (d_bscan, d_ascan))
+                if vid in ae_dict_2.keys():
+                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vid], self.scan_size, lat, (d_bscan, d_ascan))
                 else:
-                    print("ID: %s considered rpd map not exist" % vol_id)
+                    print("ID: %s considered rpd map not exist" % vid)
                     exclusion_dict["rpd"] = np.zeros(self.scan_size).astype(bool)
 
             
             # check if given number of b scans match with pre-defined number 
             if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vid, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
             # check if given number of a scans match with pre-defined number 
             if ms_analysis._vol_file.header.size_x != scan_size[1]:
-                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[vol_id]), ms_analysis._vol_file.header.size_x, scan_size[1]))
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[vid]), ms_analysis._vol_file.header.size_x, scan_size[1]))
                 continue  
 
             
@@ -528,7 +528,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 self.scan_size,
                 self.scan_field,
                 self.stackwidth,
-                data_list[vol_id],
+                data_list[vid],
                 lat,
                 (fovea_ascan, fovea_bscan), # (x,y)
                 curr_ez_intensity,
@@ -536,11 +536,12 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 tmp_excluded_dict
                 )            
 
+            pid = ms_analysis._vol_file.header.pid
 
-            if vol_id in self.patients.keys():
-                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date)
+            if pid in self.patients.keys():
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date)
             else:
-                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date, ms_analysis._vol_file.header.birthdate)
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, ms_analysis._vol_file.header.birthdate)
 
     def create_excel_sheets(
         self,
