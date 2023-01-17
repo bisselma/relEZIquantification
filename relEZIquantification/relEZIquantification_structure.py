@@ -637,11 +637,13 @@ class Visit:
         if map.laterality == "OD":
             if not self.relEZI_map_OD:
                 self.relEZI_map_OD = map
+                return False 
             else:
                 return True 
         elif map.laterality == "OS":
             if not self.relEZI_map_OS:
                 self.relEZI_map_OS = map
+                return False 
             else:
                 return True 
         else:
@@ -675,28 +677,30 @@ class Patient:
         self.day_of_birth = day_of_birth
         self.visits = [visits]
 
-    def add(self, map: Optional[RelEZI_map] = None, visitdate: Optional[date] = None):
+    def add(self, map: Optional[RelEZI_map] = None, visitdate: Optional[date] = None, vid: Optional[str] = None):
 
         for i, visit in enumerate(self.visits):
             
             if visit.date_of_recording == visitdate: # same visit
                 if visit.add(map):
                     print("Visit already exists")
-                    break
+                break
             
             if visit.date_of_recording < visitdate and i < len(self.visits): 
                 continue
 
             if visit.date_of_recording > visitdate and i == len(self.visits):
                 if map.laterality == "OD":
-                    self.visits.insert(i, Visit(None, visitdate, map, None))
+                    self.visits.insert(i, Visit(vid, visitdate, map, None))
                 else: # "OS"
-                    self.visits.insert(i, Visit(None, visitdate, None, map))
+                    self.visits.insert(i, Visit(vid, visitdate, None, map))
                 break 
             
             if map.laterality == "OD":
-                self.visits.insert(i+1, Visit(None, visitdate, map, None))
+                self.visits.insert(i+1, Visit(vid, visitdate, map, None))
+                break
             else: # "OS"
-                self.visits.insert(i+1, Visit(None, visitdate, None, map))
+                self.visits.insert(i+1, Visit(vid, visitdate, None, map))
+                break
 
 
