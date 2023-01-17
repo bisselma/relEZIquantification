@@ -343,8 +343,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             if os.path.isdir(full_path):
                 dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
             if os.path.isfile(full_path) and full_path.endswith(".vol"):
-                vid = full_path.split("\\")[-1].split("_")[-1].split(".")[0]   
-                path_list[vid] = full_path  
+                sid = full_path.split("\\")[-1].split("_")[-1].split(".")[0] # series uid 
+                path_list[sid] = full_path  
          
         return  path_list   
 
@@ -403,7 +403,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         c_ascan = self.scan_size[1] // 2 + self.scan_size[1] % 2
         nos = self.scan_size[1] // self.stackwidth # number of stacks
 
-        for vid in data_list:
+        for sid in data_list:
 
             # current distance map/ exclusion map
             curr_ez_intensity = np.zeros((scan_size[0], nos))
@@ -413,9 +413,9 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
             try:
-                fovea_bscan, fovea_ascan = fovea_coords[vid]
+                fovea_bscan, fovea_ascan = fovea_coords[sid]
             except:
-                print("ID %s is missing in Fovea List " % vid)
+                print("ID %s is missing in Fovea List " % sid)
                 continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
@@ -428,7 +428,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # get data from vol-file
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                vol_file_path=data_list[vid],
+                vol_file_path=data_list[sid],
                 model_file_path=None,
                 use_gpu=True,
                 cuda_device=0,
@@ -446,32 +446,32 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # get rpedc map if rpedc exclusion is considered
             if "rpedc" in area_exclusion.keys():
-                if vid in ae_dict_1.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict_1[vid], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
+                if sid in ae_dict_1.keys():
+                    rpedc_map = self.get_rpedc_map(ae_dict_1[sid], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion.keys():
                         exclusion_dict["atrophy"] = rpedc_map == 1
                     exclusion_dict["rpedc"] = rpedc_map == 2
                 else:
-                    print("ID: %s considered rpedc map not exist" % vid)
+                    print("ID: %s considered rpedc map not exist" % sid)
                     continue
             
             # get rpd map if rpd exclusion is considered
             if "rpd" in area_exclusion.keys():
-                if vid in ae_dict_2.keys():
-                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vid], self.scan_size, lat, (d_bscan, d_ascan))
+                if sid in ae_dict_2.keys():
+                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[sid], self.scan_size, lat, (d_bscan, d_ascan))
                 else:
-                    print("ID: %s considered rpd map not exist" % vid)
+                    print("ID: %s considered rpd map not exist" % sid)
                     exclusion_dict["rpd"] = np.zeros(self.scan_size).astype(bool)
 
             
             # check if given number of b scans match with pre-defined number 
             if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vid, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (sid, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
                 continue
 
             # check if given number of a scans match with pre-defined number 
             if ms_analysis._vol_file.header.size_x != scan_size[1]:
-                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[vid]), ms_analysis._vol_file.header.size_x, scan_size[1]))
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[sid]), ms_analysis._vol_file.header.size_x, scan_size[1]))
                 continue  
 
             
@@ -564,7 +564,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 self.scan_size,
                 self.scan_field,
                 self.stackwidth,
-                data_list[vid],
+                sid,
+                data_list[sid],
                 lat,
                 (fovea_ascan, fovea_bscan), # (x,y)
                 curr_ez_intensity,
@@ -575,9 +576,9 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             pid = ms_analysis._vol_file.header.pid
 
             if pid in self.patients.keys():
-                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, vid)
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date)
             else:
-                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, vid, ms_analysis._vol_file.header.birthdate)
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, ms_analysis._vol_file.header.birthdate)
 
     def create_excel_sheets(
         self,
@@ -622,7 +623,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
 
                         # standard entries
-                        worksheet.write(row, k * header_length, "VID: " + str(visit.vid) + " (PID: " + str(ids) + ")") # ID
+                        worksheet.write(row, k * header_length, "VID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
                         worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
                         worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
                         worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
