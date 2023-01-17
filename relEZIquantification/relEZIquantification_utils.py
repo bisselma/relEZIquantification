@@ -25,7 +25,7 @@ from relEZIquantification import superretina
 from relEZIquantification.superretina.model.super_retina import SuperRetina
 from relEZIquantification.superretina.common.common_util import pre_processing, simple_nms, remove_borders, sample_keypoint_desc
 
-from relEZIquantification.relEZIquantification_structure import *
+from relEZIquantification.relEZIquantification_os import *
 
 # global config data for superretina
 model_image_width = 768
@@ -169,46 +169,6 @@ def get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth):
     else:
         return None
 
-
-def get_rpedc_map(
-    file_path: Union[str, Path, IO] = None,
-    scan_size: Optional[tuple] = None,
-    mean_rpedc: Optional[Mean_rpedc_map] = None,
-    laterality: Optional[str] = None,
-    translation: Optional[tuple] = None
-    ) -> np.ndarray:
-
-    translation = (int(640./scan_size[0]) * translation[0], translation[1])  
-        
-    maps = cv2.imread(file_path, flags=(cv2.IMREAD_GRAYSCALE | cv2.IMREAD_ANYDEPTH))
-        
-    if laterality == "OS":
-        maps = np.flip(maps, 1)
-
-    atrophy = maps  == 0.
-        
-    maps_shifted = shift(maps, translation)
-    atrophy_shifted = shift(atrophy, translation).astype(np.uint8)
-        
-    # substract mean thickness of rpedc plus 3 times std (Duke/AREDS Definition) 
-    sub = maps_shifted - (mean_rpedc.distance_array + (3. * mean_rpedc.std_array)) 
-
-
-    sub = np.logical_or(sub > 0., maps_shifted <= 0.01).astype(np.uint8) # rpedc area
-        
-    sub_resized = cv2.resize(sub, scan_size[::-1], cv2.INTER_LINEAR) # cv2.resize get fx argument befor fy, so  the tuple "scan_size" must be inverted
-    atrophy_resized = cv2.resize(atrophy_shifted, scan_size[::-1], cv2.INTER_LINEAR)
-    
-    # structure element should have a radius of 100 um (Macustar-format (
-    # ~30 um per bscan => ~ 3 px in y-direction and 2 * 3 px to get size of rectangle in y-dir. 
-    # ~ 10 um per ascan => ~ 10 px in x-direction and 2 * 10 px to get size of rectangle in x-dir. 
-    struct = np.ones((4, 10), dtype=bool)
-    sub_dilation = binary_dilation(sub_resized, structure = struct).astype(int) * 2 # rpedc condition =2 
-    atrophy_dilation = binary_dilation(atrophy_resized, structure = struct)   
-        
-    sub_dilation[atrophy_dilation] = 1 # atrophy condition =1
-
-    return sub_dilation  
     
 def get_rpd_map(
     file_path: Union[str, Path, IO] = None,
