@@ -916,9 +916,9 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
 
             if vol_id in self.patients.keys():
-                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date)
+                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date, vol_id)
             else:
-                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date, ms_analysis._vol_file.header.birthdate)
+                self.add(current_map, vol_id, ms_analysis._vol_file.header.visit_date, vol_id, ms_analysis._vol_file.header.birthdate)
 
     def create_excel_sheets(
         self,
