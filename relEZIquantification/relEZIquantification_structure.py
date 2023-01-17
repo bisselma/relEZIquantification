@@ -682,6 +682,7 @@ class Patient:
             if visit.date_of_recording.date() == visitdate.date(): # same visit
                 if visit.add(map):
                     print("Visit already exists")
+                    break
             
             if visit.date_of_recording.date() < visitdate.date() and i < len(self.visits): 
                 continue
