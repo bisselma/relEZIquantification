@@ -687,7 +687,7 @@ class Patient:
                 break
             
             if visit.date_of_recording > visitdate:
-                if  i < len(self.visits): 
+                if  i < len(self.visits) -1: 
                     continue
                 else:
                     if map.laterality == "OD":
