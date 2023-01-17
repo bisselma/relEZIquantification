@@ -686,21 +686,25 @@ class Patient:
                     print("Visit already exists")
                 break
             
-            if visit.date_of_recording < visitdate and i < len(self.visits): 
-                continue
+            if visit.date_of_recording > visitdate:
+                if  i < len(self.visits): 
+                    continue
+                else:
+                    if map.laterality == "OD":
+                        self.visits.append(Visit(vid, visitdate, map, None))
+                        break
+                    else: # "OS"
+                        self.visits.append(Visit(vid, visitdate, None, map))
+                        break
 
-            if visit.date_of_recording > visitdate and i == len(self.visits):
+            if visit.date_of_recording < visitdate:
                 if map.laterality == "OD":
                     self.visits.insert(i, Visit(vid, visitdate, map, None))
                 else: # "OS"
                     self.visits.insert(i, Visit(vid, visitdate, None, map))
                 break 
             
-            if map.laterality == "OD":
-                self.visits.insert(i+1, Visit(vid, visitdate, map, None))
-                break
-            else: # "OS"
-                self.visits.insert(i+1, Visit(vid, visitdate, None, map))
-                break
+
+
 
 
