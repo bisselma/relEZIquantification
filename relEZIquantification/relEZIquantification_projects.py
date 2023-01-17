@@ -286,16 +286,16 @@ class RelEZIQuantificationBase:
 
         return binary_number
 
-    def add(self, map, pid, visitdate, *args): # if patient allready exists
+    def add(self, map, pid, visitdate, vid:Optional[str] = None, *args): # if patient allready exists
         if args: # new patient
             if map.laterality == "OD":
-                self.patients[pid] = Patient(pid, args[0], Visit(None, visitdate, map, None))
+                self.patients[pid] = Patient(pid, args[0], Visit(vid, visitdate, map, None))
             elif  map.laterality == "OS": 
-                self.patients[pid] = Patient(pid, args[0], Visit(None, visitdate, None, map))
+                self.patients[pid] = Patient(pid, args[0], Visit(vid, visitdate, None, map))
             else:
                 raise ValueError("Map attribute 'laterality' is not correct") 
         else: # add visit to patient object
-            self.patients[pid].add(map, visitdate)
+            self.patients[pid].add(map, visitdate, vid)
 
 
     def get_list(self, *args):
@@ -347,7 +347,6 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 path_list[vid] = full_path  
          
         return  path_list   
-
 
     def create_relEZI_maps(        
         self,
@@ -623,7 +622,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
 
                         # standard entries
-                        worksheet.write(row, k * header_length, "313" + "".join(i for i in ids.split("-"))) # ID
+                        worksheet.write(row, k * header_length, "VID: " + str(visit.vid) + " (PID: " + str(ids) + ")") # ID
                         worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
                         worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
                         worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
