@@ -576,9 +576,9 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             pid = ms_analysis._vol_file.header.pid
 
             if pid in self.patients.keys():
-                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date)
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, None)
             else:
-                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, ms_analysis._vol_file.header.birthdate)
+                self.add(current_map, pid, ms_analysis._vol_file.header.visit_date, None, ms_analysis._vol_file.header.birthdate)
 
     def create_excel_sheets(
         self,
