@@ -76,6 +76,26 @@ def get_list_by_format(
             
     return return_list
 
+def get_ezloss_list(
+    folder_path: Union[str, Path, IO] = None,
+    key: Optional[str] = None
+    ) -> Optional[Dict]:
+
+    if not os.path.exists(folder_path):
+        raise NotADirectoryError("directory: " +  folder_path + " not exist")
+
+    return_list = {}
+
+
+    dir_list = os.listdir(folder_path)
+    for dir in dir_list:
+        full_path = os.path.join(folder_path, dir)
+        if os.path.isdir(full_path):
+            dir_list.extend(os.path.join(dir, subfolder) for subfolder in os.listdir(full_path))
+        if os.path.isfile(full_path) and full_path.endswith(".tif") and key in full_path:
+            return_list[full_path.split("\\")[-1].split("_")[1]] = full_path
+    return return_list
+
 def get_vol_list(
     folder_path: Union[str, Path, IO] = None,
     project: str = None

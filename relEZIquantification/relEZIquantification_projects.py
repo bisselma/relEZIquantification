@@ -41,6 +41,8 @@ class RelEZIQuantificationBase:
     _scan_size = None
     
     _scan_field = None # field size in degree
+
+    _scan_area = None # scan area in micro meter [mm]
     
     _stackwidth = None
     
@@ -55,6 +57,8 @@ class RelEZIQuantificationBase:
     global exclusion_dict
     exclusion_dict = {} # tmp dict with all exclusion types considered 
 
+    _parameter = None
+
     _patients = {} # list with patient objects
 
     _header = ["ID", "eye", "b-scan", "visit date", "a-Scan [°]", "b-Scan [°]","ez", "elm"] # standard header of excel sheets
@@ -68,9 +72,11 @@ class RelEZIQuantificationBase:
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
+        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ssd_maps: Optional[SSDmap] = None, 
         mean_rpedc_map: Optional[Mean_rpedc_map] = None,
+        parameter: Optional[List] = None,
         patients: Optional[Dict] = {},
         
  
@@ -81,9 +87,11 @@ class RelEZIQuantificationBase:
         self._fovea_coords = fovea_coords
         self._scan_size = scan_size
         self._scan_field = scan_field
+        self._scan_area = scan_area
         self._stackwidth = stackwidth
         self._ssd_maps = ssd_maps
         self._mean_rpedc_map = mean_rpedc_map
+        self._parameter = parameter
         self._patients = patients
 
     @property
@@ -105,6 +113,10 @@ class RelEZIQuantificationBase:
     @property
     def scan_field(self):
         return self._scan_field
+
+    @property
+    def scan_area(self):
+        return self._scan_area
 
 
     @property
@@ -144,6 +156,10 @@ class RelEZIQuantificationBase:
         self._mean_rpedc_map = value 
 
     @property
+    def parameter(self):
+        return self._parameter
+
+    @property
     def patients(self):
         return self._patients 
 
@@ -151,7 +167,75 @@ class RelEZIQuantificationBase:
     def header(self):
         return self._header
 
+
+    def get_edtrs_grid_map(self):
+
+        # create mesh
+        b_scan_mesh, a_scan_mesh = np.meshgrid(
+                    np.arange( -self.scan_area[0] / 2, self.scan_area[0] / 2, self.scan_area[0] / self.scan_size[0]),
+                    np.arange( -self.scan_area[1] / 2, self.scan_area[1] / 2, self.scan_area[1] / (self.scan_size[1] // self.stackwidth))
+            )
+
+        # create degree map
+        degree_map = 180 + np.arctan2(b_scan_mesh,a_scan_mesh) * 180 / np.pi
+
+        # radius map
+        radius_map = (a_scan_mesh**2 + b_scan_mesh**2)**0.5
+
+        # initilize edtrs_grid_map with zeros valued array of the same size as degree_map
+        edtrs_grid_map = np.zeros_like(degree_map).astype(str)
+
+
+        # nasal pericentral
+        edtrs_grid_map[
+            np.logical_and(
+                np.logical_and(radius_map > 0.5, radius_map <= 1.5),
+                       np.logical_or(degree_map <= 45, degree_map > 315))] = "nasal_pericentral"
     
+        # nasal peripheral
+        edtrs_grid_map[
+            np.logical_and(radius_map > 1.5,
+                       np.logical_or(degree_map <= 45, degree_map > 315))] = "nasal_peripheral"
+    
+    
+        # superior pericentral
+        edtrs_grid_map[
+            np.logical_and(
+                np.logical_and(radius_map > 0.5, radius_map <= 1.5),
+                       np.logical_and(degree_map > 45, degree_map <= 135))] = "superior_pericentral"
+    
+        # superior peripheral
+        edtrs_grid_map[
+            np.logical_and(radius_map > 1.5,
+                       np.logical_and(degree_map > 45, degree_map <= 135))] = "superior_peripheral"
+
+        # temporal pericentral
+        edtrs_grid_map[
+            np.logical_and(
+                np.logical_and(radius_map > 0.5, radius_map <= 1.5),
+                       np.logical_and(degree_map > 135, degree_map <= 225))] = "temporal_pericentral"
+    
+        # temporal peripheral
+        edtrs_grid_map[
+            np.logical_and(radius_map > 1.5,
+                       np.logical_and(degree_map > 135, degree_map <= 225))] = "temporal_peripheral"
+
+        # inferior pericentral
+        edtrs_grid_map[
+            np.logical_and(
+                np.logical_and(radius_map > 0.5, radius_map <= 1.5),
+                       np.logical_and(degree_map > 225, degree_map <= 315))] = "inferior_pericentral"
+    
+        # inferior peripheral
+        edtrs_grid_map[
+            np.logical_and(radius_map > 1.5,
+                       np.logical_and(degree_map > 225, degree_map <= 315))] = "inferior_peripheral"
+
+        # center
+        edtrs_grid_map[radius_map <= 0.5] =  "center"
+    
+        return edtrs_grid_map
+        
     def get_rpedc_map(
         file_path: Union[str, Path, IO] = None,
         scan_size: Optional[tuple] = None,
@@ -203,6 +287,7 @@ class RelEZIQuantificationBase:
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
+        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         area_exclusion: Optional[Dict] = None,
@@ -237,6 +322,11 @@ class RelEZIQuantificationBase:
         else:
             self._scan_field = scan_field 
 
+        if not scan_area: # scan_area
+            if not self.scan_area:
+                raise ValueError("No scan_area. Tuple of shap <( y-direction in mm (bscan), x-direction in mm (ascan))> was expected")
+        else:
+            self._scan_area = scan_area 
 
         if not stackwidth: # stackwidth
             if not self._stackwidth:
@@ -255,8 +345,9 @@ class RelEZIQuantificationBase:
         if not area_exclusion: # exclusion_dict
             print("No area_exclusion. Dict of the shape <{'exclusion type': boolean}> was expected. Exclusion  types are:\nrpedc, atrophy, rpd, ezloss\nThe default condition is used")
             self._exclusion_dict({"default": True})
+        else:
+            self._parameter = area_exclusion
  
-
         if not self._ssd_maps:
             raise ValueError("Site specific distance maps not given")
 
@@ -319,10 +410,11 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         _scan_field: Optional[tuple] = None, 
         _stackwidth: Optional[int] = None, 
         _ssd_maps: Optional[SSDmap] = None, 
-        _mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
+        _mean_rpedc_map: Optional[Mean_rpedc_map] = None,
+        _parameter: Optional[List] = None, 
         _patients: Optional[Dict] = {}
         ):
-        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
+        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _parameter, _patients)
 
 
     def get_list(self, *args):
@@ -354,9 +446,10 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
+        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        area_exclusion: Optional[Dict] = None,
+        area_exclusion: Optional[List] = None,
         **kwargs
         ):
         """
@@ -370,8 +463,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 x (int): Number of B-scans
                 y (int): Number of A-scans
             scan_field (Optional[tuple]): scan field size in x and y direction in degree
-                x (int): Number of B-scans
-                y (int): Number of A-scans
+            scan_area (Optional[tuple]): scan field size in x and y direction in mm
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
@@ -379,23 +471,18 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         """
 
         # raise expection if at least on argument is incorrect. Set instance variables.
-        self.check_args(data_folder, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
+        self.check_args(data_folder, fovea_coords, scan_size, scan_field, scan_area, stackwidth, ref_layer, area_exclusion)
 
         # get a dict structure containing the data in the shape <"ID":"path + .format">
         data_list = self.get_list()
 
         # get lists of exclusion data 
-        for exclusion_type in area_exclusion.keys():
-            if exclusion_type == "rpedc":
-                ae_dict_1 = ut.get_rpedc_list(self.data_folder)
-                self.update_header(-2, "druse(y/n)") 
-                if "atrophy" in area_exclusion.keys():
-                    self.update_header(-2, "atrophy(y/n)")
-                if len(ae_dict_1.keys()) == 0:
-                    raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
-            if exclusion_type == "rpd":
-                ae_dict_2 = ut.get_rpd_list(self.data_folder)
-                self.update_header(-2, "rpd(y/n)")
+        for exclusion_type in area_exclusion:
+            if exclusion_type == "ezloss":
+                ae_dict_1 = get_ezloss_list(self.data_folder, "roi")
+                self.update_header(-2, "ezloss(y/n)") 
+        if "edtrs" in self.parameter:
+            self.update_header(-2, "edtrs_grid") 
 
 
         # central bscan/ascan, number of stacks (nos)
@@ -444,24 +531,11 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 fovea_ascan = scan_size[1] - fovea_ascan +1
 
 
-            # get rpedc map if rpedc exclusion is considered
-            if "rpedc" in area_exclusion.keys():
+            # get ezloss map if ez_loss exclusion is considered
+            if "ezloss" in area_exclusion:
                 if sid in ae_dict_1.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict_1[sid], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
-                    if "atrophy" in area_exclusion.keys():
-                        exclusion_dict["atrophy"] = rpedc_map == 1
-                    exclusion_dict["rpedc"] = rpedc_map == 2
-                else:
-                    print("ID: %s considered rpedc map not exist" % sid)
-                    continue
-            
-            # get rpd map if rpd exclusion is considered
-            if "rpd" in area_exclusion.keys():
-                if sid in ae_dict_2.keys():
-                    exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[sid], self.scan_size, lat, (d_bscan, d_ascan))
-                else:
-                    print("ID: %s considered rpd map not exist" % sid)
-                    exclusion_dict["rpd"] = np.zeros(self.scan_size).astype(bool)
+                    #exclusion_dict["ezloss"] = ezloss mask method 
+                    pass
 
             
             # check if given number of b scans match with pre-defined number 
@@ -604,6 +678,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
         b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number       
 
+        if "edtrs" in self.parameter:
+            edtrs_grid_map = self.get_edtrs_grid_map()
 
         if os.path.isdir(folder_path):
             workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_0.xlsx"),  {'nan_inf_to_errors': True})
@@ -623,7 +699,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
 
                         # standard entries
-                        worksheet.write(row, k * header_length, "VID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
+                        worksheet.write_row(0, k * header_length, self.header)
+                        worksheet.write(row, k * header_length, "SeriesUID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
                         worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
                         worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
                         worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
@@ -636,6 +713,11 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                         for idx, ex_type in enumerate(map.excluded_maps.values()):
                             worksheet.write_column(row, k * header_length + 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
+                        if "edtrs" in self.parameter:
+                            if map.laterality == "OS":
+                                worksheet.write_column(row, k * header_length + header_length -3, np.flip(edtrs_grid_map,1).flatten())
+                            else:
+                                worksheet.write_column(row, k * header_length + header_length -3, edtrs_grid_map.flatten())
 
                 row += nos * self.scan_size[0]
 
