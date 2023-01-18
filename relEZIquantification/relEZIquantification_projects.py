@@ -177,7 +177,7 @@ class RelEZIQuantificationBase:
             )
 
         # create degree map
-        degree_map = 180 + np.arctan2(b_scan_mesh,a_scan_mesh) * 180 / np.pi
+        degree_map = 180 + np.arctan2(b_scan_mesh,-a_scan_mesh) * 180 / np.pi
 
         # radius map
         radius_map = (a_scan_mesh**2 + b_scan_mesh**2)**0.5
