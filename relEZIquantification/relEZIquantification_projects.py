@@ -177,7 +177,7 @@ class RelEZIQuantificationBase:
             )
 
         # create degree map
-        degree_map = 180 + np.arctan2(b_scan_mesh,-a_scan_mesh) * 180 / np.pi
+        degree_map = 180 + np.arctan2(b_scan_mesh, a_scan_mesh) * 180 / np.pi
 
         # radius map
         radius_map = (a_scan_mesh**2 + b_scan_mesh**2)**0.5
@@ -714,10 +714,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                             worksheet.write_column(row, k * header_length + 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
                         if "edtrs" in self.parameter:
-                            if map.laterality == "OS":
-                                worksheet.write_column(row, k * header_length + header_length -3, np.flip(edtrs_grid_map,1).flatten())
-                            else:
-                                worksheet.write_column(row, k * header_length + header_length -3, edtrs_grid_map.flatten())
+                            worksheet.write_column(row, k * header_length + header_length -3, edtrs_grid_map.flatten())
 
                 row += nos * self.scan_size[0]
 
