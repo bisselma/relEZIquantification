@@ -233,7 +233,7 @@ def get_seg_by_mask(mask_path, n):
     
     return layer[0,:]
 
-def get_roi_masks(bscan, ref_layer, scan_size, seg_mask):
+def get_roi_masks(bscan, ref_layer, size_x, seg_mask):
     
     # create raw_roi and seg_mask_roi
     raw_roi = np.full((53,size_x), np.nan)
