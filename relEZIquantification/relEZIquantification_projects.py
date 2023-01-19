@@ -14,7 +14,8 @@ import pickle
 import os
 import cv2
 import xlsxwriter as xls
-from scipy.ndimage.morphology import binary_dilation, binary_erosion
+from scipy.ndimage.morphology import binary_dilation, binary_closing
+from  skimage.morphology import disk
 from read_roi import read_roi_zip
 import pandas as pd
 
@@ -167,6 +168,62 @@ class RelEZIQuantificationBase:
     def header(self):
         return self._header
 
+    def get_ezloss_map(self, filepath):
+
+        roi = cv2.imread(filepath).astype(float)
+        
+        if self.scan_field == (25,30):
+            if roi.shape[0] == 989:
+                roi = roi[0:886,:,:]
+            if self.scan_size[1] == 768:
+                crop = int((roi.shape[1] - ((roi.shape[0]) * (25/20))) / 2) + 26
+                roi = roi[:,crop:-crop]
+    
+        if self.scan_field == (10,15):
+            if roi.shape[0] == 972:
+                roi = roi[0:867,:,:]
+
+
+
+        grey = np.logical_and(roi[:,:,0] == roi[:,:,1], roi[:,:,0] == roi[:,:,2])
+
+        blue = np.logical_and(roi[:,:,0] == 255, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] == 0))
+        green = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] == 255, roi[:,:,2] == 0))
+        red = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] == 255))
+
+        blue_less = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] != 0, np.logical_and(roi[:,:,2] != 0 ,roi[:,:,1] == roi[:,:,2])))
+        green_less = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] != 0, np.logical_and(roi[:,:,0] != 0 ,roi[:,:,0] == roi[:,:,2])))
+        red_less = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] != 0, np.logical_and(roi[:,:,2] != 0 ,roi[:,:,0] == roi[:,:,1])))
+
+        mask = ~np.logical_or(red_less, np.logical_or(green_less,np.logical_or(blue_less, np.logical_or(grey, np.logical_or(blue, np.logical_or(green, red))))))
+
+
+        mask[1:50,1:200] = False
+        mask[-50:-1,1:100] = False
+
+
+        if self.scan_field == (10,15):   
+            crop = int((mask.shape[1] - ((mask.shape[0]) * (15/10))) / 2)
+            mask = mask[:,crop-4:-crop-4]
+            roi = roi[:,crop-4:-crop-4]
+
+
+        struct = disk(3)
+        mask = (binary_closing(mask, structure = struct) * 255).astype(np.uint8)
+
+        # get bounding box coordinates from the one filled external contour
+        filled = np.zeros_like(mask)
+        contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = contours[0]
+        for cont in contours:
+            x,y,w,h = cv2.boundingRect(cont)
+            if h <= 5 or w <=5:
+                continue
+            cv2.drawContours(filled, [cont], 0, 255, -1)
+
+        ezloss_map = cv2.resize(mask, self.scan_size[::-1], cv2.INTER_LINEAR)
+
+        return ezloss_map
 
     def get_edtrs_grid_map(self):
 
@@ -534,8 +591,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             # get ezloss map if ez_loss exclusion is considered
             if "ezloss" in area_exclusion:
                 if sid in ae_dict_1.keys():
-                    #exclusion_dict["ezloss"] = ezloss mask method 
-                    pass
+                    exclusion_dict["ezloss"] = self.get_ezloss_map(ae_dict_1[sid]) 
 
             
             # check if given number of b scans match with pre-defined number 
