@@ -236,8 +236,8 @@ class SSDmap:
                 factor = ms_analysis._vol_file.header.size_x / scan_size[1]
                 if factor * stackwidth_fix >= 1 and  factor % 1 == 0:
                     stackwidth = factor * stackwidth_fix
-                else:
-                    stackwidth = stackwidth_fix
+            else:
+                stackwidth = stackwidth_fix
             
             for bscan, seg_mask, ez, elm in zip(
                 ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
