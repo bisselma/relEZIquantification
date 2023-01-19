@@ -527,6 +527,12 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                                             # if values (boolean) are True the area should not be analysed.
         """
 
+
+        # create copy of stackwidth to handle different scan sizes than expected
+        stackwidth_fix = np.copy(stackwidth)
+        factor = 1
+
+
         # raise expection if at least on argument is incorrect. Set instance variables.
         self.check_args(data_folder, fovea_coords, scan_size, scan_field, scan_area, stackwidth, ref_layer, area_exclusion)
 
@@ -567,8 +573,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
-            # get start position to read data
-            d_ascan = c_ascan - fovea_ascan                 
+                
 
             # get data from vol-file
             ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
@@ -601,8 +606,10 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
             # check if given number of a scans match with pre-defined number 
             if ms_analysis._vol_file.header.size_x != scan_size[1]:
-                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[sid]), ms_analysis._vol_file.header.size_x, scan_size[1]))
-                continue  
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (sid, ms_analysis._vol_file.header.size_x, scan_size[1]))
+                factor = ms_analysis._vol_file.header.size_x / scan_size[1]
+                if factor * stackwidth_fix >= 1 and  factor % 1 == 0:
+                    stackwidth = int(factor * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
 
             
             for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
@@ -626,15 +633,16 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                     seg_mask = np.flip(seg_mask,1)
                 
                 
-                # initilized start indices to read and write data
+                # get start position to read data
+                d_ascan = int((factor * c_ascan) - fovea_ascan)
                 shift = min([d_ascan, 0])
-                start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
-                start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
-                n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
+                start_r = int(- shift + ((factor * c_ascan) - (stackwidth//2) + shift) % stackwidth) # start reading
+                start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
+                n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
                 
                 
                 # get rois
-                raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, self.scan_size, seg_mask)
+                raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, ms_analysis._vol_file.header.size_x, seg_mask)
                 
                 # iterate over bscans
                 for i in range(n_st):  
@@ -651,12 +659,12 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
   
                         # get rpe peak
-                        rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, self.stackwidth)
+                        rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
 
                         if not rpe_peak:
                             continue
                         
-                        i_profile = np.nanmean(raw_roi[:,start_r + i * self.stackwidth: start_r + (i + 1) * self.stackwidth],1)
+                        i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
 
                         ez_peak, elm_peak = get_ez_elm_peak(i_profile,
                                                             float(rpe_peak),
@@ -679,6 +687,9 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 #                                      elm_peak, i_profile[elm_peak], "x")
 # =============================================================================
 
+            # set stackwith and factor to default
+            stackwidth = stackwidth_fix
+            factor = 1
 
             tmp_excluded_dict = {}
 
