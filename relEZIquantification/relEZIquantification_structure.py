@@ -260,7 +260,7 @@ class SSDmap:
                 
 
                 # get rois
-                raw_roi, seg_mask_roi = get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
+                raw_roi, seg_mask_roi = get_roi_masks(bscan, ref_layer, ms_analysis._vol_file.header.size_x, seg_mask)
                 
 
                 for i in range(n_st):
