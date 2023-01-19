@@ -220,7 +220,7 @@ class SSDmap:
             lat = ms_analysis._vol_file.header.scan_position
 
             if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - fovea_ascan
+                fovea_ascan = ms_analysis._vol_file.header.size_x - fovea_ascan + 1
             else:
                 fovea_ascan = fovea_ascan -1
 
