@@ -56,7 +56,7 @@ class RelEZIQuantification:
         df = pd.read_excel(path)
         fovea_coords = {}
         for ids, bscan, ascan in zip(df["Patient ID"],df["Fovea B-Scan"],df["Fovea A-Achse"]):
-            fovea_coords[str(ids)] = (bscan, ascan)
+            fovea_coords[str(int(ids))] = (bscan, ascan)
         
         return fovea_coords
 
