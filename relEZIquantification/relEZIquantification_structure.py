@@ -161,7 +161,7 @@ class SSDmap:
 
         if not stackwidth:
             raise ValueError("Stackwidth (tuple) of recording not given")
-        else: stackwidth_fix = stackwidth.copy()
+        else: stackwidth_fix = np.copy(stackwidth)
         
         if not ref_layer:
             ref_layer = 11 # BM by default
