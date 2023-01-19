@@ -252,10 +252,10 @@ class SSDmap:
                     seg_mask = np.flip(seg_mask,1)
                 
                 # get start position to read data
-                d_ascan = factor * (c_ascan - fovea_ascan)
+                d_ascan = int(factor * (c_ascan - fovea_ascan))
                 shift = min([d_ascan, 0])
-                start_r = - shift + ((factor * c_ascan) - (stackwidth//2) + shift) % stackwidth # start reading
-                start_w = max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((factor * fovea_ascan) - (stackwidth//2)) // stackwidth, 0])
+                start_r = int(- shift + ((factor * c_ascan) - (stackwidth//2) + shift) % stackwidth) # start reading
+                start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((factor * fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
                 n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
                 
 
