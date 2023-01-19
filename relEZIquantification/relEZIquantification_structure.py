@@ -235,7 +235,7 @@ class SSDmap:
                 print("ID: %s has different number of ascans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.size_x, scan_size[1]))
                 factor = ms_analysis._vol_file.header.size_x / scan_size[1]
                 if factor * stackwidth_fix >= 1 and  factor % 1 == 0:
-                    stackwidth = factor * stackwidth_fix
+                    stackwidth = int(factor * stackwidth_fix)
                 
             
             for bscan, seg_mask, ez, elm in zip(
