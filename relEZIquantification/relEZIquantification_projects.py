@@ -18,6 +18,7 @@ from scipy.ndimage.morphology import binary_dilation, binary_closing
 from  skimage.morphology import disk
 from read_roi import read_roi_zip
 import pandas as pd
+from PIL import Image
 
 import eyepy as ep
 
@@ -170,7 +171,7 @@ class RelEZIQuantificationBase:
 
     def get_ezloss_map(self, filepath):
 
-        roi = cv2.imread(filepath).astype(float)
+        roi = np.array(Image.open(filepath),dtype=float)
         
         if self.scan_field == (25,30):
             if roi.shape[0] == 989:
