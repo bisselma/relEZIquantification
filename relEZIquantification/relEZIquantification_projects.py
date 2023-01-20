@@ -209,7 +209,7 @@ class RelEZIQuantificationBase:
             roi = roi[:,crop-4:-crop-4]
 
 
-        struct = disk(3)
+        struct = disk(4)
         mask = (binary_closing(mask, structure = struct) * 255).astype(np.uint8)
 
         # get bounding box coordinates from the one filled external contour
@@ -218,11 +218,11 @@ class RelEZIQuantificationBase:
         contours = contours[0]
         for cont in contours:
             x,y,w,h = cv2.boundingRect(cont)
-            if h <= 5 or w <=5:
+            if h <= 10 or w <=10:
                 continue
             cv2.drawContours(filled, [cont], 0, 255, -1)
 
-        ezloss_map = cv2.resize(mask, self.scan_size[::-1], cv2.INTER_LINEAR)
+        ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_LINEAR)
 
         return ezloss_map
 
