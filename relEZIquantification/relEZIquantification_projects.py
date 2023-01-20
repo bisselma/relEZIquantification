@@ -209,7 +209,7 @@ class RelEZIQuantificationBase:
             roi = roi[:,crop-4:-crop-4]
 
 
-        struct = disk(3)
+        struct = disk(2)
         mask = (binary_dilation(mask, structure = struct) * 255).astype(np.uint8)
 
         # get bounding box coordinates from the one filled external contour
