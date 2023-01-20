@@ -749,7 +749,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
         b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number       
 
-        if "edtrs" in self.parameter:
+        if "etdrs" in self.parameter:
             edtrs_grid_map = self.get_edtrs_grid_map()
 
         if os.path.isdir(folder_path):
@@ -763,31 +763,34 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             worksheet.write_row(0, 0, self.header)
             
         row = 1
-        header_length = len(self.header)
 
         for i, ids in enumerate(self.patients.keys()):
-            for visit in self.patients[ids].visits: 
-                for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
+            for j in range(2): # first all OD than all OS
+                for visit in self.patients[ids].visits: 
+                    if j == 0:
+                        if visit.relEZI_map_OD:
+                            map = visit.relEZI_map_OD
+                    else:
+                        if visit.relEZI_map_OS:
+                            map = visit.relEZI_map_OS
+                    # standard entries
+                    worksheet.write(row,         0, "SeriesUID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
+                    worksheet.write_column(row,  1, nos * self.scan_size[0] * [map.laterality]) # Eye
+                    worksheet.write_column(row,  2, b_scan_n) # bscan
+                    worksheet.write(row,         3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
+                    worksheet.write_column(row,  4, a_scan_mesh) # A-scan
+                    worksheet.write_column(row,  5, b_scan_mesh) # B-scan
+                    worksheet.write_column(row, -2, map.ezi_map.flatten())
+                    worksheet.write_column(row, -1, map.elmi_map.flatten())
 
-                        # standard entries
-                        worksheet.write_row(0, k * header_length, self.header)
-                        worksheet.write(row, k * header_length, "SeriesUID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
-                        worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
-                        worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
-                        worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
-                        worksheet.write_column(row, k * header_length + 4, a_scan_mesh) # A-scan
-                        worksheet.write_column(row, k * header_length + 5, b_scan_mesh) # B-scan
-                        worksheet.write_column(row, k * header_length + header_length -2, map.ezi_map.flatten())
-                        worksheet.write_column(row, k * header_length + header_length -1, map.elmi_map.flatten())
+                    # additional entries
+                    for idx, ex_type in enumerate(map.excluded_maps.values()):
+                         worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
-                        # additional entries
-                        for idx, ex_type in enumerate(map.excluded_maps.values()):
-                            worksheet.write_column(row, k * header_length + 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
+                    if "etdrs" in self.parameter:
+                        worksheet.write_column(row, -3, edtrs_grid_map.flatten())
 
-                        if "edtrs" in self.parameter:
-                            worksheet.write_column(row, k * header_length + header_length -3, edtrs_grid_map.flatten())
-
-                row += nos * self.scan_size[0]
+                    row += nos * self.scan_size[0]
 
                 if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
                     workbook.close()
