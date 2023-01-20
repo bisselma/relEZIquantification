@@ -767,7 +767,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
-                for visit in self.patients[ids].visits: 
+                for vi, visit in enumerate(self.patients[ids].visits): 
                     if j == 0:
                         if visit.relEZI_map_OD:
                             map = visit.relEZI_map_OD
@@ -798,7 +798,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
                     row += nos * self.scan_size[0]
 
-                    if row == ((n * nos * self.scan_size[0]) +1)  and i < len(self.patients.keys()) -1:
+                    if row == ((n * nos * self.scan_size[0]) +1)  and i+1 + vi+1 + j+1 < len(self.patients.keys()) + len(self.patients[ids].keys()) + 2:
                         workbook.close()
                         workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(file_num) + ".xlsx"), {'nan_inf_to_errors': True})
                         worksheet = workbook.add_worksheet()            
