@@ -323,8 +323,6 @@ class SSDmap:
             stackwidth = stackwidth_fix
             factor = 1
             
-        
-            
         # set all zeros to nan
         ez_std = np.nanstd(ez_distance, axis=0)
         ez_std[ez_std == np.nan] = 0.
