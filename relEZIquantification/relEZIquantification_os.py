@@ -12,7 +12,6 @@ from scipy.ndimage import shift
 from datetime import date
 import pickle
 import os
-import cv2
 import xlsxwriter as xls
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from read_roi import read_roi_zip
