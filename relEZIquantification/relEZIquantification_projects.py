@@ -222,7 +222,7 @@ class RelEZIQuantificationBase:
                 continue
             cv2.drawContours(filled, [cont], 0, 255, -1)
 
-        ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_LINEAR)
+        ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_LINEAR) > 0 
 
         return ezloss_map
 
