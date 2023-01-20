@@ -764,6 +764,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             
         row = 1
         header_length = len(self.header)
+        file_num = 0
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
@@ -800,10 +801,12 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
                     if row == ((n * nos * self.scan_size[0]) +1)  and i < len(self.patients.keys()) -1:
                         workbook.close()
-                        workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
+                        workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(file_num) + ".xlsx"), {'nan_inf_to_errors': True})
                         worksheet = workbook.add_worksheet()            
                         worksheet.write_row(0, 0, self.header)   
                         row = 1
+                        file_num += 1
+
 
         workbook.close()
 
