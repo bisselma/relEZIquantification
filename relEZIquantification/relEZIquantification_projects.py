@@ -771,9 +771,14 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                     if j == 0:
                         if visit.relEZI_map_OD:
                             map = visit.relEZI_map_OD
+                        else:
+                            continue
                     else:
                         if visit.relEZI_map_OS:
                             map = visit.relEZI_map_OS
+                        else:
+                            continue
+                        
                     # standard entries
                     worksheet.write(row,         0, "SeriesUID: " + str(map._series_uid) + " (PID: " + str(ids) + ")") # ID
                     worksheet.write_column(row,  1, nos * self.scan_size[0] * [map.laterality]) # Eye
@@ -793,12 +798,12 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
                     row += nos * self.scan_size[0]
 
-                if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
-                    workbook.close()
-                    workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
-                    worksheet = workbook.add_worksheet()            
-                    worksheet.write_row(0, 0, self.header)   
-                    row = 1
+                    if row == ((n * nos * self.scan_size[0]) +1)  and i < len(self.patients.keys()) -1:
+                        workbook.close()
+                        workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
+                        worksheet = workbook.add_worksheet()            
+                        worksheet.write_row(0, 0, self.header)   
+                        row = 1
 
         workbook.close()
 
