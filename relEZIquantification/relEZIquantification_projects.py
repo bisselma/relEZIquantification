@@ -188,9 +188,9 @@ class RelEZIQuantificationBase:
 
         grey = np.logical_and(roi[:,:,0] == roi[:,:,1], roi[:,:,0] == roi[:,:,2])
 
-        blue = np.logical_and(roi[:,:,0] == 255, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] == 0))
-        green = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] == 255, roi[:,:,2] == 0))
-        red = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] == 255))
+        blue = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] == 0))
+        green = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] != 0, roi[:,:,2] == 0))
+        red = np.logical_and(roi[:,:,0] == 0, np.logical_and(roi[:,:,1] == 0, roi[:,:,2] != 0))
 
         blue_less = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] != 0, np.logical_and(roi[:,:,2] != 0 ,roi[:,:,1] == roi[:,:,2])))
         green_less = np.logical_and(roi[:,:,0] != 0, np.logical_and(roi[:,:,1] != 0, np.logical_and(roi[:,:,0] != 0 ,roi[:,:,0] == roi[:,:,2])))
