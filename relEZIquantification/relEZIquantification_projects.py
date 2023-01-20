@@ -548,8 +548,8 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             if exclusion_type == "ezloss":
                 ae_dict_1 = get_ezloss_list(self.data_folder, "roi")
                 self.update_header(-2, "ezloss(y/n)") 
-        if "edtrs" in self.parameter:
-            self.update_header(-2, "edtrs_grid") 
+        if "etdrs" in self.parameter:
+            self.update_header(-2, "etdrs_grid") 
 
 
         # central bscan/ascan, number of stacks (nos)
