@@ -763,6 +763,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             worksheet.write_row(0, 0, self.header)
             
         row = 1
+        header_length = len(self.header)
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
@@ -780,15 +781,15 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                     worksheet.write(row,         3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
                     worksheet.write_column(row,  4, a_scan_mesh) # A-scan
                     worksheet.write_column(row,  5, b_scan_mesh) # B-scan
-                    worksheet.write_column(row, -2, map.ezi_map.flatten())
-                    worksheet.write_column(row, -1, map.elmi_map.flatten())
+                    worksheet.write_column(row, header_length -2, map.ezi_map.flatten())
+                    worksheet.write_column(row, header_length -1, map.elmi_map.flatten())
 
                     # additional entries
                     for idx, ex_type in enumerate(map.excluded_maps.values()):
                          worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
                     if "etdrs" in self.parameter:
-                        worksheet.write_column(row, -3, edtrs_grid_map.flatten())
+                        worksheet.write_column(row, header_length -3, edtrs_grid_map.flatten())
 
                     row += nos * self.scan_size[0]
 
