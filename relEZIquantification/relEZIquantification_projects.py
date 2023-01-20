@@ -224,7 +224,7 @@ class RelEZIQuantificationBase:
 
         ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_LINEAR) > 0 
 
-        if laterality == OS:
+        if laterality == "OS":
             ezloss_map = np.flip(ezloss_map, 1)
 
         return ezloss_map
@@ -600,7 +600,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             # get ezloss map if ez_loss exclusion is considered
             if "ezloss" in area_exclusion:
                 if sid in ae_dict_1.keys():
-                    exclusion_dict["ezloss"] = self.get_ezloss_map(ae_dict_1[sid]) 
+                    exclusion_dict["ezloss"] = self.get_ezloss_map(ae_dict_1[sid], lat) 
 
             
             # check if given number of b scans match with pre-defined number 
