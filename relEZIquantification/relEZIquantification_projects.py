@@ -763,7 +763,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             
         row = 1
         header_length = len(self.header)
-        file_num = 0
+        file_num = 1
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
