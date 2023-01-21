@@ -798,7 +798,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
                     row += nos * self.scan_size[0]
 
-                    if row == ((n * nos * self.scan_size[0]) +1)  and i+1 + vi+1 + j+1 < len(self.patients.keys()) + len(self.patients[ids].visits) + 2:
+                    if row == ((n * nos * self.scan_size[0]) +1)  and not (i == len(self.patients.keys()) -1 and vi == len(self.patients[ids].visits) -1 and  j == 1):
                         workbook.close()
                         workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(file_num) + ".xlsx"), {'nan_inf_to_errors': True})
                         worksheet = workbook.add_worksheet()            
