@@ -231,7 +231,7 @@ class RelEZIQuantificationBase:
     def get_edtrs_grid_map(self):
 
         # create mesh
-        b_scan_mesh, a_scan_mesh = np.meshgrid(
+        a_scan_mesh, b_scan_mesh = np.meshgrid(
                     np.arange( -self.scan_area[0] / 2, self.scan_area[0] / 2, self.scan_area[0] / self.scan_size[0]),
                     np.arange( -self.scan_area[1] / 2, self.scan_area[1] / 2, self.scan_area[1] / (self.scan_size[1] // self.stackwidth))
             )
