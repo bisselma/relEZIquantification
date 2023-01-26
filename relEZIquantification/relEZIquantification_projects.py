@@ -232,8 +232,8 @@ class RelEZIQuantificationBase:
 
         # create mesh
         a_scan_mesh, b_scan_mesh = np.meshgrid(
-                    np.arange( -self.scan_field[1] / 2, self.scan_field[1] / 2, self.scan_field[1] / (self.scan_size[1] // self.stackwidth)),
-                    np.arange( -self.scan_field[0] / 2, self.scan_field[0] / 2, self.scan_field[0] / self.scan_size[0]),
+                    np.arange( -self.scan_area[1] / 2, self.scan_area[1] / 2, self.scan_area[1] / (self.scan_size[1] // self.stackwidth)),
+                    np.arange( -self.scan_area[0] / 2, self.scan_area[0] / 2, self.scan_area[0] / self.scan_size[0]),
             )
 
         # create degree map
