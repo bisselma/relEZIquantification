@@ -45,6 +45,8 @@ class RelEZIQuantification:
                 self._rel_EZI_data = RelEZIQuantificationMicro(self.project_name)
         elif self.project_name == "mactel":
                 self._rel_EZI_data = RelEZIQuantificationMactel(self.project_name)
+        elif self.project_name == "mactel2":
+                self._rel_EZI_data = RelEZIQuantificationMactel2(self.project_name)
         else:
             raise ValueError("The project name is no correct or not yet implemented\nThe existing project names are:\nmacustar\nmicro\nmactel")
     
