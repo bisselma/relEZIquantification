@@ -275,10 +275,9 @@ def rotate_slo(slo, grid, scan_field):
     # [alpha, beta, (1 - alpha) * cx - beta * cy]
     # [-beta, alpha, beta * cx + (1 - alpha) * cy]
     # ] 
-    R = np.append(R, np.array([
-            (1 - R[0,0]) * cx - R[0,1] * cy,
-            R[0,1] * cx + (1 - R[0,0]) * cy
-            ]), axis=1)
+    R[:2,-1] = R[:2,-1]  +  np.array([(1 - R[0,0]) * cx - R[0,1] * cy,
+                                    R[0,1] * cx + (1 - R[0,0]) * cy
+                                    ]).T
 
     # transform slo_img so that vol_scan coordination system is base 
     return cv2.warpAffine(slo, R, slo.shape)
