@@ -954,20 +954,15 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         cache_segmentation=True
                         )
 
-
-                    raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1]
-                    seg_voxel = ms_analysis.classes[::-1,:,:]
-
-
                     if vi == 0:
                         # only if patient has more than one visit
                         if len(self.patients[ids].visits) > 1:
-                            SLO_0 = ms_analysis.vol_file.slo_image # first SLO image
+                            slo0 = ms_analysis.vol_file.slo_image # first SLO image
 
                             # get slo_coordinates
                             grid = np.array(ms_analysis.vol_file.grid)
 
-                            SLO_0 = rotate_slo(SLO_0, grid)
+                            slo0 = rotate_slo(slo0, grid, self.scan_field)
 
 
                         fovea_bscan, fovea_ascan = map._fovea_coordinates
@@ -981,18 +976,16 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
                         n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
 
-                        #raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
-                        #seg_voxel = ms_analysis.classes[::-1,:,:][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
+                        raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
+                        seg_voxel = ms_analysis.classes[::-1,:,:][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
 
 
                     else: # 
-                        SLO_n =  ms_analysis.vol_file.slo_image # nth SLO image  
-                        SLO_n = rotate_slo(SLO_n, grid,self.scan_field)
 
-                        # get transfromation matrix H
-                        H = get2DProjectiveTransformationMartix_by_SuperRetina(SLO_n, SLO_0)
+                        raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
 
-
+                        raw_voxel = raw_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
+                        seg_voxel = seg_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
 
 
 

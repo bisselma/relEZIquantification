@@ -19,6 +19,7 @@ from scipy.signal import find_peaks
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 import eyepy as ep
 from PIL import Image
+import SimpleITK as sitk
 
 
 from relEZIquantification import superretina  
@@ -93,7 +94,6 @@ grid_iamd = {
 
     30: (7, 0),   31:  (7, 90),  32:  (7, 180), 33:  (7, 270),
 }
-
 
 def get_ez_elm_peak(i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
         
@@ -281,6 +281,77 @@ def rotate_slo(slo, grid, scan_field):
 
     # transform slo_img so that vol_scan coordination system is base 
     return cv2.warpAffine(slo, R, slo.shape)
+
+def resample(image, transform, *args):
+    # Output image Origin, Spacing, Size, Direction are taken from the reference
+    # image in this call to Resample
+    reference_image = image
+
+    if args:
+        if args[0] == "raw":
+            interpolator = sitk.sitkLanczosWindowedSinc
+        elif args[0] == "seg":
+            interpolator = sitk.sitkNearestNeighbor 
+        else:
+            raise ValueError("Wrong type. 'raw' or 'seg' was expected")
+    else:
+        interpolator = sitk.sitkNearestNeighbor 
+
+    default_value = 0
+    return sitk.Resample(image, reference_image, transform,
+                         interpolator, default_value)
+
+def registrate_voxel(vol, slo0, scan_field):
+
+    # vol data
+    vol_raw = vol._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
+    vol_seg = vol.classes.transpose(1, 2, 0)
+
+    # convert voxel data to sitk images
+    vol_raw_img = sitk.GetImageFromArray(vol_raw) # y x z -> z x y (sitk order)
+    vol_seg_img = sitk.GetImageFromArray(vol_seg) # y x z -> z x y (sitk order)
+    
+    # set metrical spacing in each direction based on vol-header information 
+    z_scale = vol._vol_file.header.distance
+    x_scale = vol._vol_file.header.scale_x
+    y_scale = vol._vol_file.header.scale_z
+    vol_raw_img.SetSpacing((z_scale, x_scale, y_scale))
+    vol_seg_img.SetSpacing((z_scale, x_scale, y_scale))
+
+    # get orientation between voxel and slo 
+    grid = np.array(vol.vol_file.grid)
+    slon = vol.vol_file.slo_image
+    slon = rotate_slo(slon, grid, scan_field) 
+
+    # Matrix H
+    H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0) 
+
+    # setup transformation
+
+    # traslation vector
+    translation = (z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
+    rotation_center = (z_scale *97,0,0) # z x y
+    affine= sitk.AffineTransform(3)
+
+    # rotation Matrix R
+    R = np.eye(3)
+    R[:2,:2] = H[:2,:2]
+
+    # change angle to counterclock-wise
+    H[0,1] = -H[0,1]
+    H[1,0] = -H[1,0] 
+
+    affine.SetMatrix(R.flatten())
+    affine.SetTranslation(translation)
+    affine.SetCenter(rotation_center)
+    
+    resampled_raw = resample(vol_raw_img, affine, "raw")
+    resampled_seg = resample(vol_raw_img, affine, "seg")
+
+    raw = sitk.GetArrayViewFromImage(resampled_raw).transpose(2,0,1)[::-1] # y x z -> z y x
+    seg = sitk.GetArrayViewFromImage(resampled_seg).transpose(2,0,1)[::-1,:,:] # y x z -> z y x
+
+    return raw, seg
 
 def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
 
@@ -553,7 +624,6 @@ def interpolate_grid(x,y,z,w,h, point_radius):
 
 
     return zi
-
 
 def show_grid_over_relEZIMap(
     img,
