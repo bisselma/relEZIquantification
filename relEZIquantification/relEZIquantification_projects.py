@@ -660,25 +660,25 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                         excl[start_w + i] = self.get_exclusion_value(idx_w, start_r, i)
 
   
-                        # get rpe peak
-                        rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
+                    # get rpe peak
+                    rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
 
-                        if not rpe_peak:
-                            continue
+                    if not rpe_peak:
+                        continue
                         
-                        i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
+                    i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
 
-                        ez_peak, elm_peak = get_ez_elm_peak(i_profile,
+                    ez_peak, elm_peak = get_ez_elm_peak(i_profile,
                                                             float(rpe_peak),
                                                             ez_ssd_mean[start_w + i],
                                                             ez_ssd_std[start_w + i],
                                                             elm_ssd_mean[start_w + i],
                                                             elm_ssd_std[start_w + i])
                         
-                        if ez_peak != 0:
-                            ez[start_w + i] = i_profile[ez_peak]
-                        if elm_peak != 0:
-                            elm[start_w + i] = i_profile[elm_peak]
+                    if ez_peak != 0:
+                        ez[start_w + i] = i_profile[ez_peak]
+                    if elm_peak != 0:
+                        elm[start_w + i] = i_profile[elm_peak]
                         
                         
 # =============================================================================
@@ -955,8 +955,6 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         )
 
 
-
-
                     raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1]
                     seg_voxel = ms_analysis.classes[::-1,:,:]
 
@@ -968,26 +966,10 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
                             # get slo_coordinates
                             grid = np.array(ms_analysis.vol_file.grid)
-        
-                            # expected coordinates of scan field
-                            p = np.array([
-                            [0, 768],
-                            [64, 64]
-                            ])
+
+                            SLO_0 = rotate_slo(SLO_0, grid)
 
 
-                            q = np.array([
-                            [grid[-1,0], grid[-1,2]],
-                            [grid[-1,1], grid[-1,3]]
-                            ])              
-
-
-                            # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-                            R = ut.get2DRigidTransformationMatrix(q, p)
-
-                            # transform slo_img so that volume scan orientation is 
-                            slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
-                    
                         fovea_bscan, fovea_ascan = map._fovea_coordinates
                         # delta between real fovea centre and current fovea bscan position 
                         d_bscan  = c_bscan - fovea_bscan
@@ -1004,20 +986,17 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
 
                     else: # 
-                        ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-                            vol_file_path=map._volfile_path,
-                            model_file_path=None,
-                            use_gpu=True,
-                            cuda_device=0,
-                            normalize_mean=0.5,
-                            normalize_std=0.25,
-                            cache_segmentation=True
-                        )
-
                         SLO_n =  ms_analysis.vol_file.slo_image # nth SLO image  
+                        SLO_n = rotate_slo(SLO_n, grid)
 
                         # get transfromation matrix H
                         H = get2DProjectiveTransformationMartix_by_SuperRetina(SLO_n, SLO_0)
+
+                        
+
+
+
+
 
 
 
@@ -1055,63 +1034,63 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                             stackwidth = int(factor * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
             
             
-            for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
-                raw_voxel, # read raw data
-                seg_voxel, # read seg mask
-                curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.ssd_maps.ez_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.ssd_maps.ez_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                self.ssd_maps.elm_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
-                self.ssd_maps.elm_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write 
-                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])), # read
-                range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
-                ):
+                    for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
+                        raw_voxel, # read raw data
+                        seg_voxel, # read seg mask
+                        curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        self.ssd_maps.ez_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        self.ssd_maps.ez_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        self.ssd_maps.elm_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write                
+                        self.ssd_maps.elm_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write 
+                        range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0])), # read
+                        range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
+                        ):
 
                 
-                # flip maps if laterality is left (OS)
-                if lat == "OS":
-                    bscan = np.flip(bscan,1)
-                    seg_mask = np.flip(seg_mask,1)
+                        # flip maps if laterality is left (OS)
+                        if lat == "OS":
+                            bscan = np.flip(bscan,1)
+                            seg_mask = np.flip(seg_mask,1)
             
                 
-                # get rois
-                raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, ms_analysis._vol_file.header.size_x, seg_mask)
+                        # get rois
+                        raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, ms_analysis._vol_file.header.size_x, seg_mask)
                 
-                # iterate over bscans
-                for i in range(n_st):  
+                        # iterate over bscans
+                        for i in range(n_st):  
 
 
 
-                    if "default" in exclusion_dict:
-                        pass 
-                        ############### to be implemented ##################
-                        # condition seg_mask_area 10 and 11 thickness over stackwidth not higher 15
+                            if "default" in exclusion_dict:
+                                pass 
+                                ############### to be implemented ##################
+                                # condition seg_mask_area 10 and 11 thickness over stackwidth not higher 15
 
-                    else:
-                        excl[start_w + i] = self.get_exclusion_value(idx_w, start_r, i)
+                            else:
+                                excl[start_w + i] = self.get_exclusion_value(idx_w, start_r, i)
 
   
-                        # get rpe peak
-                        rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
+                            # get rpe peak
+                            rpe_peak = get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
 
-                        if not rpe_peak:
-                            continue
+                            if not rpe_peak:
+                                continue
                         
-                        i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
+                            i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
 
-                        ez_peak, elm_peak = get_ez_elm_peak(i_profile,
+                            ez_peak, elm_peak = get_ez_elm_peak(i_profile,
                                                             float(rpe_peak),
                                                             ez_ssd_mean[start_w + i],
                                                             ez_ssd_std[start_w + i],
                                                             elm_ssd_mean[start_w + i],
                                                             elm_ssd_std[start_w + i])
                         
-                        if ez_peak != 0:
-                            ez[start_w + i] = i_profile[ez_peak]
-                        if elm_peak != 0:
-                            elm[start_w + i] = i_profile[elm_peak]
+                            if ez_peak != 0:
+                                ez[start_w + i] = i_profile[ez_peak]
+                            if elm_peak != 0:
+                                elm[start_w + i] = i_profile[elm_peak]
                         
                         
 # =============================================================================
@@ -1122,21 +1101,21 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 #                                      elm_peak, i_profile[elm_peak], "x")
 # =============================================================================
 
-            # set stackwith and factor to default
-            stackwidth = stackwidth_fix
-            factor = 1
+                    # set stackwith and factor to default
+                    stackwidth = stackwidth_fix
+                    factor = 1
 
-            tmp_excluded_dict = {}
+                    tmp_excluded_dict = {}
 
-            for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
-                tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
-                curr_excluded = curr_excluded % 2**idx
+                    for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
+                        tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
+                        curr_excluded = curr_excluded % 2**idx
 
 
-            # add data to map object
-            map._ezi_map = curr_ez_intensity
-            map._elmi_map = curr_elm_intensity
-            map._excluded_maps = tmp_excluded_dict
+                    # add data to map object
+                    map._ezi_map = curr_ez_intensity
+                    map._elmi_map = curr_elm_intensity
+                    map._excluded_maps = tmp_excluded_dict
 
 
     def create_patient_list(self):

@@ -169,7 +169,6 @@ def get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth):
     else:
         return None
 
-    
 def get_rpd_map(
     file_path: Union[str, Path, IO] = None,
     scan_size: Optional[tuple] = None,
@@ -212,7 +211,6 @@ def get_rpd_map(
 
     return mask_resized
 
-
 def get_seg_by_mask(mask_path, n):
     """
     Args:
@@ -245,6 +243,38 @@ def get_roi_masks(bscan, ref_layer, size_x, seg_mask):
             seg_mask_roi[:, col_idx] = seg_mask[idxs_ref[0] -48: idxs_ref[0] +5, col_idx]
     
     return raw_roi, seg_mask_roi
+
+def rotate_slo(slo, grid):
+    # expected coordinates of scan field
+    p = np.array([
+    [0, 768],
+    [64, 64]
+    ])
+
+
+    q = np.array([
+        [grid[-1,0], grid[-1,2]],
+        [grid[-1,1], grid[-1,3]]
+        ])              
+
+
+    # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
+    R = get2DRigidTransformationMatrix(q, p)
+
+    # central coordinates
+    cx = cy = 768/2
+
+    # M = [
+    # [alpha, beta, (1 - alpha) * cx - beta * cy]
+    # [-beta, alpha, beta * cx + (1 - alpha) * cy]
+    # ] 
+    R.append(R, np.array([
+            [(1 - R[0,0]) * cx - R[0,1] * cy],
+            [R[0,1] * cx + (1 - R[0,0]) * cy],
+            ]), axis=1)
+
+    # transform slo_img so that vol_scan coordination system is base 
+    return cv2.warpAffine(slo, R, (768, 768))
 
 def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
 
@@ -404,7 +434,6 @@ def get2DRigidTransformationMatrix(p, q):
 
     return R 
 
-
 def get_microperimetry(
         df,
         pid: str = None,
@@ -429,8 +458,6 @@ def get_microperimetry(
     micro[micro == "<0"] = -1
 
     return micro 
-
-
 
 def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
 
