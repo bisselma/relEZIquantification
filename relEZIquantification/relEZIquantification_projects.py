@@ -965,7 +965,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                             slo0 = rotate_slo(slo0, grid, self.scan_field)
 
 
-                        fovea_bscan, fovea_ascan = map._fovea_coordinates
+                        fovea_ascan, fovea_bscan = map._fovea_coordinates
                         # delta between real fovea centre and current fovea bscan position 
                         d_bscan  = c_bscan - fovea_bscan
 
