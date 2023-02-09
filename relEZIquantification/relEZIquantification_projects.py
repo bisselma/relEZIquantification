@@ -881,8 +881,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                 bscan (int): Number of B-scan including fovea
                 ascan (int): Number of A-scan including fovea
             scan_size (Optional[tuple]): scan field size in x and y direction
-                x (int): Number of B-scans
-                y (int): Number of A-scans
+                y (int): Number of B-scans
+                x (int): Number of A-scans
             scan_field (Optional[tuple]): scan field size in x and y direction in degree
             scan_area (Optional[tuple]): scan field size in x and y direction in mm
             stackwidth (Optional[int]): number of columns for a single profile
@@ -987,21 +987,15 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
                     else: # 
                         SLO_n =  ms_analysis.vol_file.slo_image # nth SLO image  
-                        SLO_n = rotate_slo(SLO_n, grid)
+                        SLO_n = rotate_slo(SLO_n, grid,self.scan_field)
 
                         # get transfromation matrix H
                         H = get2DProjectiveTransformationMartix_by_SuperRetina(SLO_n, SLO_0)
 
-                        
 
 
 
 
-
-
-
-
-                
                     # laterality 
                     lat = map._laterality
 

@@ -244,11 +244,19 @@ def get_roi_masks(bscan, ref_layer, size_x, seg_mask):
     
     return raw_roi, seg_mask_roi
 
-def rotate_slo(slo, grid):
+def rotate_slo(slo, grid, scan_field):
+    
     # expected coordinates of scan field
+    y_direction, x_direction = scan_field # in degree
+
+    slo_sz = slo.shape[0] # squared size
+
+    # central coordinates
+    cx = cy = slo_sz/2
+
     p = np.array([
-    [0, 768],
-    [64, 64]
+    [(1 - x_direction/30) * slo_sz/2, slo_sz - ((1 - x_direction/30) * slo_sz/2)],
+    [(1 - y_direction/30) * slo_sz/2, (1 - y_direction/30) * slo_sz/2]
     ])
 
 
@@ -261,8 +269,7 @@ def rotate_slo(slo, grid):
     # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
     R = get2DRigidTransformationMatrix(q, p)
 
-    # central coordinates
-    cx = cy = 768/2
+
 
     # M = [
     # [alpha, beta, (1 - alpha) * cx - beta * cy]
@@ -274,7 +281,7 @@ def rotate_slo(slo, grid):
             ]), axis=1)
 
     # transform slo_img so that vol_scan coordination system is base 
-    return cv2.warpAffine(slo, R, (768, 768))
+    return cv2.warpAffine(slo, R, slo.shape)
 
 def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
 
