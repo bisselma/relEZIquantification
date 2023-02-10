@@ -710,7 +710,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 sid,
                 data_list[sid],
                 lat,
-                (fovea_ascan, fovea_bscan), # (x,y)
+                (fovea_bscan, fovea_ascan), # (x,y)
                 curr_ez_intensity,
                 curr_elm_intensity,
                 tmp_excluded_dict
@@ -965,7 +965,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                             slo0 = rotate_slo(slo0, grid, self.scan_field)
 
 
-                        fovea_ascan, fovea_bscan = map._fovea_coordinates
+                        fovea_bscan, fovea_ascan = map._fovea_coordinates
                         # delta between real fovea centre and current fovea bscan position 
                         d_bscan  = c_bscan - fovea_bscan
 
@@ -1138,7 +1138,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                 sid,
                 data_list[sid],
                 lat,
-                (fovea_ascan, fovea_bscan), # (x,y)
+                (fovea_bscan, fovea_ascan), # (x,y)
                 None, # curr_ez_intensity
                 None, # curr_elm_intensity
                 None, # tmp_excluded_dict
