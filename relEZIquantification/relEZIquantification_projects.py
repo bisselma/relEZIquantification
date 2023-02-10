@@ -970,9 +970,10 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
 
 
+                    print("hello")
 
                     # laterality 
-                    lat = map._laterality
+                    lat = map.laterality
 
                     #sid
                     sid = map.series_uid

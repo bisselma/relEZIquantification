@@ -345,8 +345,8 @@ def registrate_voxel(vol, slo0, scan_field):
     affine.SetTranslation(translation)
     affine.SetCenter(rotation_center)
     
-    resampled_raw = resample(vol_raw_img, affine, "BSpline")
-    resampled_seg = resample(vol_raw_img, affine, "Linear")
+    resampled_raw = resample(vol_raw_img, affine, "Linear")
+    resampled_seg = resample(vol_seg_img, affine, "Linear")
 
     raw = sitk.GetArrayViewFromImage(resampled_raw).transpose(2,0,1)[::-1] # y x z -> z y x
     seg = sitk.GetArrayViewFromImage(resampled_seg).transpose(2,0,1)[::-1,:,:] # y x z -> z y x
