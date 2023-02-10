@@ -288,14 +288,14 @@ def resample(image, transform, *args):
     reference_image = image
 
     if args:
-        if args[0] == "raw":
-            interpolator = sitk.sitkLanczosWindowedSinc
-        elif args[0] == "seg":
-            interpolator = sitk.sitkNearestNeighbor 
+        if args[0] == "BSpline":
+            interpolator = sitk.sitkBSpline
+        elif args[0] == "Linear":
+            interpolator = sitk.sitkLinear 
         else:
             raise ValueError("Wrong type. 'raw' or 'seg' was expected")
     else:
-        interpolator = sitk.sitkNearestNeighbor 
+        interpolator = sitk.sitkLinear
 
     default_value = 0
     return sitk.Resample(image, reference_image, transform,
