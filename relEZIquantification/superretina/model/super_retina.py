@@ -9,7 +9,7 @@ import torch
 import torch.nn as nn
 
 from relEZIquantification.superretina.loss.dice_loss import DiceBCELoss, DiceLoss
-from rel_ezrelEZIquantification_intensity.superretina.loss.triplet_loss import triplet_margin_loss_gor, triplet_margin_loss_gor_one, sos_reg
+from relEZIquantification.superretina.loss.triplet_loss import triplet_margin_loss_gor, triplet_margin_loss_gor_one, sos_reg
 
 from relEZIquantification.superretina.common.common_util import remove_borders, sample_keypoint_desc, simple_nms, nms, \
     sample_descriptors
