@@ -601,7 +601,7 @@ class RelEZI_map(OCTmap):
         ):
         super().__init__(name, date_of_origin, scan_size, scan_field)
         self._stackwidth = stackwidth
-        self.scan_area = scan_area
+        self._scan_area = scan_area
         self._series_uid = series_uid
         self._volfile_path = volfile_path
         self._laterality = laterality
