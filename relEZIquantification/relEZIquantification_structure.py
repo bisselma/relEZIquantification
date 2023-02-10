@@ -569,6 +569,8 @@ class RelEZI_map(OCTmap):
     _volfile_path = None
 
     _stackwidth = None
+
+    _scan_area = None 
     
     _laterality = None
 
@@ -587,6 +589,7 @@ class RelEZI_map(OCTmap):
         date_of_origin: Optional[date] = None, 
         scan_size: Optional[tuple] = None, 
         scan_field: Optional[tuple] = None,
+        scan_area: Optional[tuple] = None,
         stackwidth = None,
         series_uid: Optional[str] = None,
         volfile_path: Union[str, Path, IO] = None,
@@ -598,6 +601,7 @@ class RelEZI_map(OCTmap):
         ):
         super().__init__(name, date_of_origin, scan_size, scan_field)
         self._stackwidth = stackwidth
+        self.scan_area = scan_area
         self._series_uid = series_uid
         self._volfile_path = volfile_path
         self._laterality = laterality

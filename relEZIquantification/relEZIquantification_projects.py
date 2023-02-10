@@ -42,8 +42,6 @@ class RelEZIQuantificationBase:
     _scan_size = None
     
     _scan_field = None # field size in degree
-
-    _scan_area = None # scan area in micro meter [mm]
     
     _stackwidth = None
     
@@ -73,7 +71,6 @@ class RelEZIQuantificationBase:
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
-        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ssd_maps: Optional[SSDmap] = None, 
         mean_rpedc_map: Optional[Mean_rpedc_map] = None,
@@ -88,7 +85,6 @@ class RelEZIQuantificationBase:
         self._fovea_coords = fovea_coords
         self._scan_size = scan_size
         self._scan_field = scan_field
-        self._scan_area = scan_area
         self._stackwidth = stackwidth
         self._ssd_maps = ssd_maps
         self._mean_rpedc_map = mean_rpedc_map
@@ -114,11 +110,6 @@ class RelEZIQuantificationBase:
     @property
     def scan_field(self):
         return self._scan_field
-
-    @property
-    def scan_area(self):
-        return self._scan_area
-
 
     @property
     def stackwidth(self):
@@ -228,12 +219,12 @@ class RelEZIQuantificationBase:
 
         return ezloss_map
 
-    def get_edtrs_grid_map(self):
+    def get_edtrs_grid_map(self, scan_area):
 
         # create mesh
         a_scan_mesh, b_scan_mesh = np.meshgrid(
-                    np.arange( -self.scan_area[1] / 2, self.scan_area[1] / 2, self.scan_area[1] / (self.scan_size[1] // self.stackwidth)),
-                    np.arange( -self.scan_area[0] / 2, self.scan_area[0] / 2, self.scan_area[0] / self.scan_size[0]),
+                    np.arange( -scan_area[1] / 2, scan_area[1] / 2, scan_area[1] / (self.scan_size[1] // self.stackwidth)),
+                    np.arange( -scan_area[0] / 2, scan_area[0] / 2, scan_area[0] / self.scan_size[0]),
             )
 
         # create degree map
@@ -347,7 +338,6 @@ class RelEZIQuantificationBase:
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
-        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         area_exclusion: Optional[Dict] = None,
@@ -381,12 +371,6 @@ class RelEZIQuantificationBase:
                 raise ValueError("No scan_field. Tuple of shap <( y-direction in degree (bscan), x-direction in degree (ascan))> was expected")
         else:
             self._scan_field = scan_field 
-
-        if not scan_area: # scan_area
-            if not self.scan_area:
-                raise ValueError("No scan_area. Tuple of shap <( y-direction in mm (bscan), x-direction in mm (ascan))> was expected")
-        else:
-            self._scan_area = scan_area 
 
         if not stackwidth: # stackwidth
             if not self._stackwidth:
@@ -505,7 +489,6 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
-        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         area_exclusion: Optional[List] = None,
@@ -522,7 +505,6 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 x (int): Number of B-scans
                 y (int): Number of A-scans
             scan_field (Optional[tuple]): scan field size in x and y direction in degree
-            scan_area (Optional[tuple]): scan field size in x and y direction in mm
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
@@ -536,7 +518,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
 
 
         # raise expection if at least on argument is incorrect. Set instance variables.
-        self.check_args(data_folder, fovea_coords, scan_size, scan_field, scan_area, stackwidth, ref_layer, area_exclusion)
+        self.check_args(data_folder, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
 
         # get a dict structure containing the data in the shape <"ID":"path + .format">
         data_list = self.get_list()
@@ -698,7 +680,13 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
             for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
                 tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
                 curr_excluded = curr_excluded % 2**idx
-                         
+
+
+            # calculate scan_area
+            scan_area = tuple(
+                [ms_analysis._vol_file.bscan_headers[0].start_y - ms_analysis._vol_file.bscan_headers[-1].start_y, # enface y-direction in mm
+                ms_analysis._vol_file.bscan_headers[0].end_x - ms_analysis._vol_file.bscan_headers[0].start_x] # enface x-direction in mm
+                )  
             
             # create Map Objects containing the created maps
             current_map = RelEZI_map(
@@ -706,6 +694,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                 date.today(),
                 self.scan_size,
                 self.scan_field,
+                scan_area,
                 self.stackwidth,
                 sid,
                 data_list[sid],
@@ -746,9 +735,6 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
         b_scan_mesh = b_scan_mesh.flatten() # serialized a-scan mesh 
 
         b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number       
-
-        if "etdrs" in self.parameter:
-            edtrs_grid_map = self.get_edtrs_grid_map()
 
         if os.path.isdir(folder_path):
             workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_0.xlsx"),  {'nan_inf_to_errors': True})
@@ -793,7 +779,7 @@ class RelEZIQuantificationMactel(RelEZIQuantificationBase):
                          worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
                     if "etdrs" in self.parameter:
-                        worksheet.write_column(row, header_length -3, edtrs_grid_map.flatten())
+                        worksheet.write_column(row, header_length -3, self.get_edtrs_grid_map(map._scan_area).flatten())
 
                     row += nos * self.scan_size[0]
 
@@ -867,7 +853,6 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         scan_field: Optional[tuple] = None,
-        scan_area: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
         area_exclusion: Optional[List] = None,
@@ -884,7 +869,6 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                 y (int): Number of B-scans
                 x (int): Number of A-scans
             scan_field (Optional[tuple]): scan field size in x and y direction in degree
-            scan_area (Optional[tuple]): scan field size in x and y direction in mm
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
@@ -905,7 +889,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
 
         # raise expection if at least on argument is incorrect. Set instance variables.
-        self.check_args(data_folder, fovea_coords, scan_size, scan_field, scan_area, stackwidth, ref_layer, area_exclusion)
+        self.check_args(data_folder, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
 
         # create the patient list structure without data
         self.create_patient_list()
@@ -1126,7 +1110,13 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
             fovea_bscan = self.scan_size[0] - fovea_bscan +1
 
             if lat == "OS": # if left eye is processed
-                fovea_ascan = self.scan_size[1] - fovea_ascan +1            
+                fovea_ascan = self.scan_size[1] - fovea_ascan +1   
+
+            # calculate scan_area
+            scan_area = tuple(
+                    [vol_file.bscan_headers[0].start_y - vol_file.bscan_headers[-1].start_y, # enface y-direction in mm
+                    vol_file.bscan_headers[0].end_x - vol_file.bscan_headers[0].start_x] # enface x-direction in mm
+                     )          
             
             # create Map Objects containing without maps
             current_map = RelEZI_map(
@@ -1135,6 +1125,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                 self.scan_size,
                 self.scan_field,
                 self.stackwidth,
+                scan_area,
                 sid,
                 data_list[sid],
                 lat,
@@ -1176,9 +1167,6 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
         b_scan_mesh = b_scan_mesh.flatten() # serialized a-scan mesh 
 
         b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number       
-
-        if "etdrs" in self.parameter:
-            edtrs_grid_map = self.get_edtrs_grid_map()
 
         if os.path.isdir(folder_path):
             workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_0.xlsx"),  {'nan_inf_to_errors': True})
@@ -1223,7 +1211,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                          worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
                     if "etdrs" in self.parameter:
-                        worksheet.write_column(row, header_length -3, edtrs_grid_map.flatten())
+                        worksheet.write_column(row, header_length -3, self.get_edtrs_grid_map(map._scan_area).flatten())
 
                     row += nos * self.scan_size[0]
 
