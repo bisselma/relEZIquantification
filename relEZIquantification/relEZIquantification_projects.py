@@ -24,9 +24,9 @@ import eyepy as ep
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
 
-from rel_ez_intensity.getAdjacencyMatrix import plot_layers
-from rel_ez_intensity.seg_core import get_retinal_layers
-from rel_ez_intensity import utils as ut
+from relEZIquantification.getAdjacencyMatrix import plot_layers
+from relEZIquantification.seg_core import get_retinal_layers
+from relEZIquantification import utils as ut
 
 from relEZIquantification.relEZIquantification_structure import *
 
