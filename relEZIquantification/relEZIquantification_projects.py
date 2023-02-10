@@ -960,16 +960,14 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
                         n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
 
-                        raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
-                        seg_voxel = ms_analysis.classes[::-1,:,:][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
+                        raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1]
+                        seg_voxel = ms_analysis.classes[::-1,:,:]
 
 
                     else: # 
-
+                        
+                        # registrate voxel based on slo0
                         raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
-
-                        raw_voxel = raw_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
-                        seg_voxel = seg_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])]
 
 
 
@@ -1006,8 +1004,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
             
             
                     for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
-                        raw_voxel, # read raw data
-                        seg_voxel, # read seg mask
+                        raw_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
+                        seg_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                         curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
