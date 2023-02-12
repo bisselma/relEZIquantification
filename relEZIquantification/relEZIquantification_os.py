@@ -221,3 +221,6 @@ def get_microperimetry_IR_image_list(
                 return_list_s[pid] = full_path
 
     return return_list_m, return_list_s
+
+if __name__ == "__main__":
+    pass

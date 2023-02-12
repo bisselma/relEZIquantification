@@ -964,13 +964,11 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         seg_voxel = ms_analysis.classes[::-1,:,:]
 
 
-                    else: # 
-                        
+                    else:
                         # registrate voxel based on slo0
                         raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
 
 
-                    print("hello")
 
                     # laterality 
                     lat = map.laterality
@@ -1569,3 +1567,5 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
     pass 
 
+if __name__ == "__main__":
+    pass

@@ -180,3 +180,5 @@ class RelEZIQuantification:
     def create_excel_sheets(self, *args):
         self._rel_EZI_data.create_excel_sheets(*args)
 
+if __name__ == "__main__":
+    pass
