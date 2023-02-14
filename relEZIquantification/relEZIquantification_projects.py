@@ -959,7 +959,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         start_r = int(- shift + ((factor * c_ascan) - (stackwidth//2) + shift) % stackwidth) # start reading
                         start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
                         n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
-
+                        
+                        raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
                         raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1]
                         seg_voxel = ms_analysis.classes[::-1,:,:]
 
