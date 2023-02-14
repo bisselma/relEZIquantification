@@ -960,14 +960,59 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
                         n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
                         
-                        raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
                         raw_voxel = ms_analysis._vol_file.oct_volume_raw[::-1]
                         seg_voxel = ms_analysis.classes[::-1,:,:]
 
 
                     else:
                         # registrate voxel based on slo0
-                        raw_voxel, seg_voxel = registrate_voxel(ms_analysis, slo0, self.scan_field)
+                        # vol data
+                        vol_raw = vol._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
+                        vol_seg = vol.classes.transpose(1, 2, 0)
+
+                        # convert voxel data to sitk images
+                        vol_raw_img = sitk.GetImageFromArray(vol_raw) # y x z -> z x y (sitk order)
+                        vol_seg_img = sitk.GetImageFromArray(vol_seg) # y x z -> z x y (sitk order)
+    
+                        # set metrical spacing in each direction based on vol-header information 
+                        z_scale = vol._vol_file.header.distance
+                        x_scale = vol._vol_file.header.scale_x
+                        y_scale = vol._vol_file.header.scale_z
+                        vol_raw_img.SetSpacing((z_scale, x_scale, y_scale))
+                        vol_seg_img.SetSpacing((z_scale, x_scale, y_scale))
+
+                        # get orientation between voxel and slo 
+                        grid = np.array(vol.vol_file.grid)
+                        slon = vol.vol_file.slo_image
+                        slon = rotate_slo(slon, grid, scan_field) 
+
+                        # Matrix H
+                        H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0) 
+
+                        # setup transformation
+
+                        # traslation vector
+                        translation = (z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
+                        rotation_center = (z_scale *97,0,0) # z x y
+                        affine= sitk.AffineTransform(3)
+
+                        # rotation Matrix R
+                        R = np.eye(3)
+                        R[:2,:2] = H[:2,:2]
+
+                        # change angle to counterclock-wise
+                        H[0,1] = -H[0,1]
+                        H[1,0] = -H[1,0] 
+
+                        affine.SetMatrix(R.flatten())
+                        affine.SetTranslation(translation)
+                        affine.SetCenter(rotation_center)
+    
+                        resampled_raw = resample(vol_raw_img, affine, "Linear")
+                        resampled_seg = resample(vol_seg_img, affine, "Linear")
+
+                        raw_voxel = sitk.GetArrayViewFromImage(resampled_raw).transpose(2,0,1)[::-1] # y x z -> z y x
+                        seg_voxel = sitk.GetArrayViewFromImage(resampled_seg).transpose(2,0,1)[::-1,:,:] # y x z -> z y x
 
 
 
