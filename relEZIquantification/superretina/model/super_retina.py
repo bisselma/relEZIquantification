@@ -292,3 +292,6 @@ class SuperRetina(nn.Module):
                    enhanced_label, detector_pred, loss_detector_num, loss_descriptor_num
 
         return detector_pred, descriptor_pred
+
+if __name__ == "__main__":
+    pass
