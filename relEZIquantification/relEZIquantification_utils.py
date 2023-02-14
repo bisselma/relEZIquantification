@@ -19,8 +19,6 @@ from scipy.signal import find_peaks
 from scipy.ndimage.morphology import binary_dilation, binary_erosion
 import eyepy as ep
 from PIL import Image
-import SimpleITK as sitk
-
 
 from relEZIquantification import superretina  
 from relEZIquantification.superretina.model.super_retina import SuperRetina
@@ -300,58 +298,6 @@ def resample(image, transform, *args):
     default_value = 0
     return sitk.Resample(image, reference_image, transform,
                          interpolator, default_value)
-
-def registrate_voxel(vol, slo0, scan_field):
-
-    # vol data
-    vol_raw = vol._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
-    vol_seg = vol.classes.transpose(1, 2, 0)
-
-    # convert voxel data to sitk images
-    vol_raw_img = sitk.GetImageFromArray(vol_raw) # y x z -> z x y (sitk order)
-    vol_seg_img = sitk.GetImageFromArray(vol_seg) # y x z -> z x y (sitk order)
-    
-    # set metrical spacing in each direction based on vol-header information 
-    z_scale = vol._vol_file.header.distance
-    x_scale = vol._vol_file.header.scale_x
-    y_scale = vol._vol_file.header.scale_z
-    vol_raw_img.SetSpacing((z_scale, x_scale, y_scale))
-    vol_seg_img.SetSpacing((z_scale, x_scale, y_scale))
-
-    # get orientation between voxel and slo 
-    grid = np.array(vol.vol_file.grid)
-    slon = vol.vol_file.slo_image
-    slon = rotate_slo(slon, grid, scan_field) 
-
-    # Matrix H
-    H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0) 
-
-    # setup transformation
-
-    # traslation vector
-    translation = (z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
-    rotation_center = (z_scale *97,0,0) # z x y
-    affine= sitk.AffineTransform(3)
-
-    # rotation Matrix R
-    R = np.eye(3)
-    R[:2,:2] = H[:2,:2]
-
-    # change angle to counterclock-wise
-    H[0,1] = -H[0,1]
-    H[1,0] = -H[1,0] 
-
-    affine.SetMatrix(R.flatten())
-    affine.SetTranslation(translation)
-    affine.SetCenter(rotation_center)
-    
-    resampled_raw = resample(vol_raw_img, affine, "Linear")
-    resampled_seg = resample(vol_seg_img, affine, "Linear")
-
-    raw = sitk.GetArrayViewFromImage(resampled_raw).transpose(2,0,1)[::-1] # y x z -> z y x
-    seg = sitk.GetArrayViewFromImage(resampled_seg).transpose(2,0,1)[::-1,:,:] # y x z -> z y x
-
-    return raw, seg
 
 def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image):
 

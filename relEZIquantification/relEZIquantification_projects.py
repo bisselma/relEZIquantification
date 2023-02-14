@@ -3,6 +3,7 @@ from pathlib import Path
 from timeit import repeat
 from typing import Callable, Dict, List, Optional, Union, IO
 from unicodedata import name
+import SimpleITK as sitk
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -967,23 +968,23 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     else:
                         # registrate voxel based on slo0
                         # vol data
-                        vol_raw = vol._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
-                        vol_seg = vol.classes.transpose(1, 2, 0)
+                        vol_raw = ms_analysis._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
+                        vol_seg = ms_analysis.classes.transpose(1, 2, 0)
 
                         # convert voxel data to sitk images
                         vol_raw_img = sitk.GetImageFromArray(vol_raw) # y x z -> z x y (sitk order)
                         vol_seg_img = sitk.GetImageFromArray(vol_seg) # y x z -> z x y (sitk order)
     
                         # set metrical spacing in each direction based on vol-header information 
-                        z_scale = vol._vol_file.header.distance
-                        x_scale = vol._vol_file.header.scale_x
-                        y_scale = vol._vol_file.header.scale_z
+                        z_scale = ms_analysis._vol_file.header.distance
+                        x_scale = ms_analysis._vol_file.header.scale_x
+                        y_scale = ms_analysis._vol_file.header.scale_z
                         vol_raw_img.SetSpacing((z_scale, x_scale, y_scale))
                         vol_seg_img.SetSpacing((z_scale, x_scale, y_scale))
 
                         # get orientation between voxel and slo 
-                        grid = np.array(vol.vol_file.grid)
-                        slon = vol.vol_file.slo_image
+                        grid = np.array(ms_analysis.vol_file.grid)
+                        slon = ms_analysis.vol_file.slo_image
                         slon = rotate_slo(slon, grid, scan_field) 
 
                         # Matrix H
