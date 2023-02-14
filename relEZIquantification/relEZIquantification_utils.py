@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Union, IO
 import os
 import cv2 
+import SimpleITK as sitk
 import numpy as np
 import torch
 from torch import full

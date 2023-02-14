@@ -3,7 +3,6 @@ from pathlib import Path
 from timeit import repeat
 from typing import Callable, Dict, List, Optional, Union, IO
 from unicodedata import name
-import SimpleITK as sitk
 import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
