@@ -19,8 +19,6 @@ from read_roi import read_roi_zip
 import pandas as pd
 from PIL import Image
 
-import eyepy as ep
-
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
 
@@ -992,7 +990,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         # setup transformation
 
                         # traslation vector
-                        translation = (z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
+                        translation = (-z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
                         rotation_center = (z_scale *97,0,0) # z x y
                         affine= sitk.AffineTransform(3)
 
