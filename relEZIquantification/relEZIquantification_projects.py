@@ -990,7 +990,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         # setup transformation
 
                         # traslation vector
-                        translation = (-x_scale * H[0,-1], 0., -z_scale * H[1,-1]) # x y z
+                        translation = (-x_scale * H[0,-1], 0., z_scale * H[1,-1]  *(self.scan_size[0]/slon.shape[0])) # x y z
                         rotation_center = (0,0,z_scale*97) # x y z
                         affine= sitk.AffineTransform(3)
 
