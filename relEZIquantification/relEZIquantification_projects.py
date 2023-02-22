@@ -965,8 +965,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     else:
                         # registrate voxel based on slo0
                         # vol data
-                        vol_raw = ms_analysis._vol_file.oct_volume_raw.transpose(1, 2, 0) # default z y x -> y x z
-                        vol_seg = ms_analysis.classes.transpose(1, 2, 0)
+                        vol_raw = ms_analysis._vol_file.oct_volume_raw # default z y x -> x y z
+                        vol_seg = ms_analysis.classes
 
                         # convert voxel data to sitk images
                         vol_raw_img = sitk.GetImageFromArray(vol_raw) # y x z -> z x y (sitk order)
@@ -976,8 +976,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         z_scale = ms_analysis._vol_file.header.distance
                         x_scale = ms_analysis._vol_file.header.scale_x
                         y_scale = ms_analysis._vol_file.header.scale_z
-                        vol_raw_img.SetSpacing((z_scale, x_scale, y_scale))
-                        vol_seg_img.SetSpacing((z_scale, x_scale, y_scale))
+                        vol_raw_img.SetSpacing((x_scale, y_scale, z_scale))
+                        vol_seg_img.SetSpacing((x_scale, y_scale, z_scale))
 
                         # get orientation between voxel and slo 
                         grid = np.array(ms_analysis.vol_file.grid)
@@ -990,17 +990,16 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         # setup transformation
 
                         # traslation vector
-                        translation = (-z_scale * H[1,-1], -x_scale * H[0,-1], 0.) # z x y
-                        rotation_center = (z_scale *self.scan_size[0],0,0) # z x y
+                        translation = (-x_scale * H[0,-1], 0., -z_scale * H[1,-1]) # x y z
+                        rotation_center = (0,0,z_scale*97) # x y z
                         affine= sitk.AffineTransform(3)
 
                         # rotation Matrix R
                         R = np.eye(3)
-                        R[:2,:2] = H[:2,:2]
-
-                        # change angle to counterclock-wise
-                        H[0,1] = -H[0,1]
-                        H[1,0] = -H[1,0] 
+                        R[0,0] = H[0,0]
+                        R[-1,-1] = H[1,1]
+                        R[0,2] = -H[1,0]
+                        R[2,0] = -H[0,1]
 
                         affine.SetMatrix(R.flatten())
                         affine.SetTranslation(translation)
@@ -1009,8 +1008,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         resampled_raw = resample(vol_raw_img, affine, "Linear")
                         resampled_seg = resample(vol_seg_img, affine, "Linear")
 
-                        raw_voxel = sitk.GetArrayViewFromImage(resampled_raw).transpose(2,0,1)[::-1] # y x z -> z y x
-                        seg_voxel = sitk.GetArrayViewFromImage(resampled_seg).transpose(2,0,1)[::-1,:,:] # y x z -> z y x
+                        raw_voxel = sitk.GetArrayFromImage(resampled_raw)[::-1] # x y z -> z y x
+                        seg_voxel = sitk.GetArrayFromImage(resampled_seg)[::-1] # x y z -> z y x
 
 
 
