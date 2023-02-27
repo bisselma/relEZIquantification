@@ -1246,9 +1246,9 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
                     # get arrays as string type
                     ez_map =np.copy(map.ezi_map).astype(str).flatten()
-                    ez_map[ez_map == 0.0] = "nan"
+                    ez_map[ez_map == "0.0"] = "nan"
                     elm_map =np.copy(map.elmi_map).astype(str).flatten()
-                    elm_map[elm_map == 0.0] = "nan"
+                    elm_map[elm_map == "0.0"] = "nan"
 
                     worksheet.write_column(row, header_length -2, ez_map)
                     worksheet.write_column(row, header_length -1, elm_map)
