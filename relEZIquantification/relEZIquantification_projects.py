@@ -1243,8 +1243,15 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     worksheet.write(row,         3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
                     worksheet.write_column(row,  4, a_scan_mesh) # A-scan
                     worksheet.write_column(row,  5, b_scan_mesh) # B-scan
-                    worksheet.write_column(row, header_length -2, map.ezi_map.flatten())
-                    worksheet.write_column(row, header_length -1, map.elmi_map.flatten())
+
+                    # get arrays as string type
+                    ez_map =np.copy(map.ezi_map).astype(str).flatten()
+                    ez_map[ez_map == 0.0] = "nan"
+                    elm_map =np.copy(map.elmi_map).astype(str).flatten()
+                    elm_map[elm_map == 0.0] = "nan"
+
+                    worksheet.write_column(row, header_length -2, ez_map)
+                    worksheet.write_column(row, header_length -1, elm_map)
 
                     # additional entries
                     for idx, ex_type in enumerate(map.excluded_maps.values()):
@@ -1280,17 +1287,18 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         _stackwidth: Optional[int] = None, 
         _ssd_maps: Optional[SSDmap] = None, 
         _mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
+        _parameter: Optional[List] = None,
         _patients: Optional[Dict] = {}
         ):
-        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _patients)
+        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _parameter, _patients)
 
 
     def get_list(self, *args):
 
-        if args:
-            data_folder = args[0]
-        else:
+        if not args:
             data_folder = self.data_folder
+        else:
+            data_folder = args[0]
 
         if not os.path.exists(data_folder):
             raise NotADirectoryError("directory: " +  data_folder + " not exist")
@@ -1317,7 +1325,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         scan_field: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        area_exclusion: Optional[Dict] = None,
+        area_exclusion: Optional[List] = None,
         **kwargs
         ):
         """
@@ -1338,6 +1346,10 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
                                             # if values (boolean) are True the area should not be analysed.
         """
+
+        # create copy of stackwidth to handle different scan sizes than expected
+        stackwidth_fix = np.copy(stackwidth)
+        factor = 1
 
         # raise expection if at least on argument is incorrect. Set instance variables.
         self.check_args(data_folder, fovea_coords, scan_size, scan_field, stackwidth, ref_layer, area_exclusion)
@@ -1432,8 +1444,10 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
             # check if given number of a scans match with pre-defined number 
             if ms_analysis._vol_file.header.size_x != scan_size[1]:
-                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_list[vol_id]), ms_analysis._vol_file.header.size_x, scan_size[1]))
-                continue  
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.size_x, scan_size[1]))
+                factor = ms_analysis._vol_file.header.size_x / scan_size[1]
+                if factor * stackwidth_fix >= 1 and  factor % 1 == 0:
+                    stackwidth = int(factor * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
 
             
             for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
@@ -1457,11 +1471,12 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                     seg_mask = np.flip(seg_mask,1)
                 
                 
-                # initilized start indices to read and write data
+                # get start position to read data
+                d_ascan = int((factor * c_ascan) - fovea_ascan)
                 shift = min([d_ascan, 0])
-                start_r = - shift + (c_ascan - (stackwidth//2) + shift) % stackwidth # start reading
-                start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
-                n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
+                start_r = int(- shift + ((factor * c_ascan) - (stackwidth//2) + shift) % stackwidth) # start reading
+                start_w = int(max([(((factor * c_ascan) - (stackwidth//2)) // stackwidth) - ((fovea_ascan) - (stackwidth//2)) // stackwidth, 0]))
+                n_st = int((ms_analysis._vol_file.header.size_x - start_r - max([d_ascan,0])) // stackwidth) # possible number of stacks 
                 
                 
                 # get rois
@@ -1510,13 +1525,21 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 #                                      elm_peak, i_profile[elm_peak], "x")
 # =============================================================================
 
+            # set stackwith and factor to default
+            stackwidth = stackwidth_fix
+            factor = 1
 
             tmp_excluded_dict = {}
 
             for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
                 tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
                 curr_excluded = curr_excluded % 2**idx
-                         
+
+            # calculate scan_area
+            scan_area = tuple(
+                [ms_analysis._vol_file.bscan_headers[0].start_y - ms_analysis._vol_file.bscan_headers[-1].start_y, # enface y-direction in mm
+                ms_analysis._vol_file.bscan_headers[0].end_x - ms_analysis._vol_file.bscan_headers[0].start_x] # enface x-direction in mm
+                )                          
             
             # create Map Objects containing the created maps
             current_map = RelEZI_map(
@@ -1524,10 +1547,12 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 date.today(),
                 self.scan_size,
                 self.scan_field,
+                scan_area,
                 self.stackwidth,
+                None,
                 data_list[vol_id],
                 lat,
-                (fovea_ascan, fovea_bscan), # (x,y)
+                (fovea_bscan, fovea_ascan), # (x,y)
                 curr_ez_intensity,
                 curr_elm_intensity,
                 tmp_excluded_dict
@@ -1576,34 +1601,48 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             
         row = 1
         header_length = len(self.header)
+        file_num = 1
 
         for i, ids in enumerate(self.patients.keys()):
-            for visit in self.patients[ids].visits: 
-                for k, map in enumerate(visit.get_maps()): # if OD and OS, the sheet is extended to the right
+            for j in range(2): # first all OD than all OS
+                for vi, visit in enumerate(self.patients[ids].visits): 
+                    if j == 0:
+                        if visit.relEZI_map_OD:
+                            map = visit.relEZI_map_OD
+                        else:
+                            continue
+                    else:
+                        if visit.relEZI_map_OS:
+                            map = visit.relEZI_map_OS
+                        else:
+                            continue
+                        
+                    # standard entries
+                    worksheet.write(row,         0,  "313" + "".join(n for n in ids.split("-"))) # ID
+                    worksheet.write_column(row,  1, nos * self.scan_size[0] * [map.laterality]) # Eye
+                    worksheet.write_column(row,  2, b_scan_n) # bscan
+                    worksheet.write(row,         3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
+                    worksheet.write_column(row,  4, a_scan_mesh) # A-scan
+                    worksheet.write_column(row,  5, b_scan_mesh) # B-scan
+                    worksheet.write_column(row, header_length -2, map.ezi_map.flatten())
+                    worksheet.write_column(row, header_length -1, map.elmi_map.flatten())
 
-                        # standard entries
-                        worksheet.write(row, k * header_length, "313" + "".join(i for i in ids.split("-"))) # ID
-                        worksheet.write_column(row, k * header_length + 1, nos * self.scan_size[0] * [map.laterality]) # Eye
-                        worksheet.write_column(row, k * header_length + 2, b_scan_n) # bscan
-                        worksheet.write(row, k * header_length + 3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
-                        worksheet.write_column(row, k * header_length + 4, a_scan_mesh) # A-scan
-                        worksheet.write_column(row, k * header_length + 5, b_scan_mesh) # B-scan
-                        worksheet.write_column(row, k * header_length + header_length -2, map.ezi_map.flatten())
-                        worksheet.write_column(row, k * header_length + header_length -1, map.elmi_map.flatten())
+                    # additional entries
+                    for idx, ex_type in enumerate(map.excluded_maps.values()):
+                         worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
-                        # additional entries
-                        for idx, ex_type in enumerate(map.excluded_maps.values()):
-                            worksheet.write_column(row, k * header_length + 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
+                    if "etdrs" in self.parameter:
+                        worksheet.write_column(row, header_length -3, self.get_edtrs_grid_map(map._scan_area).flatten())
 
+                    row += nos * self.scan_size[0]
 
-                row += nos * self.scan_size[0]
-
-                if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
-                    workbook.close()
-                    workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
-                    worksheet = workbook.add_worksheet()            
-                    worksheet.write_row(0, 0, self.header)   
-                    row = 1
+                    if row == ((n * nos * self.scan_size[0]) +1)  and not (i == len(self.patients.keys()) -1 and vi == len(self.patients[ids].visits) -1 and  j == 1):
+                        workbook.close()
+                        workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
+                        worksheet = workbook.add_worksheet()            
+                        worksheet.write_row(0, 0, self.header)   
+                        row = 1
+                        file_num += 1
 
         workbook.close()
 
