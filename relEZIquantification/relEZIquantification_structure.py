@@ -265,8 +265,7 @@ class SSDmap:
                 for i in range(n_st):
 
                     rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
-                    seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
+                    rpe_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10] = np.nan
 
                     rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
                     if len(rpe_peak) >= 1:
@@ -276,9 +275,7 @@ class SSDmap:
 
 
                     ez_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    ez_roi[np.roll( # use erosion to expand the search area by one on both sides
-                        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8,
-                        -2)] = np.nan
+                    ez_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8] = np.nan
 
                     ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
                     if len(ez_peak) == 1:
@@ -293,7 +290,7 @@ class SSDmap:
                     
         
                     elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7 ] = np.nan
+                    elm_roi[np.roll(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7, -3)] = np.nan
 
                     elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
                     if len(elm_peak) >= 1:
