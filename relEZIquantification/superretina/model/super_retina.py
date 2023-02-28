@@ -2,18 +2,18 @@ import random
 import sys
 import time
 
-from rel_ez_intensity.superretina.model.pke_module import pke_learn
+from relEZIquantification.superretina.model.pke_module import pke_learn
 
 from torch.nn import functional as F
 import torch
 import torch.nn as nn
 
-from rel_ez_intensity.superretina.loss.dice_loss import DiceBCELoss, DiceLoss
-from rel_ez_intensity.superretina.loss.triplet_loss import triplet_margin_loss_gor, triplet_margin_loss_gor_one, sos_reg
+from relEZIquantification.superretina.loss.dice_loss import DiceBCELoss, DiceLoss
+from relEZIquantification.superretina.loss.triplet_loss import triplet_margin_loss_gor, triplet_margin_loss_gor_one, sos_reg
 
-from rel_ez_intensity.superretina.common.common_util import remove_borders, sample_keypoint_desc, simple_nms, nms, \
+from relEZIquantification.superretina.common.common_util import remove_borders, sample_keypoint_desc, simple_nms, nms, \
     sample_descriptors
-from rel_ez_intensity.superretina.common.train_util import get_gaussian_kernel, affine_images
+from relEZIquantification.superretina.common.train_util import get_gaussian_kernel, affine_images
 
 
 def double_conv(in_channels, out_channels):
@@ -292,3 +292,6 @@ class SuperRetina(nn.Module):
                    enhanced_label, detector_pred, loss_detector_num, loss_descriptor_num
 
         return detector_pred, descriptor_pred
+
+if __name__ == "__main__":
+    pass

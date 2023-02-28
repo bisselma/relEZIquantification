@@ -14,7 +14,7 @@ import pickle
 import os
 import cv2
 import xlsxwriter as xls
-from scipy.ndimage.morphology import binary_dilation
+from scipy.ndimage.morphology import binary_dilation, binary_erosion
 from read_roi import read_roi_zip
 import pandas as pd
 
@@ -23,9 +23,11 @@ import eyepy as ep
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
 
-from rel_ez_intensity.getAdjacencyMatrix import plot_layers
-from rel_ez_intensity.seg_core import get_retinal_layers
-from rel_ez_intensity import utils as ut
+from relEZIquantification.getAdjacencyMatrix import plot_layers
+from relEZIquantification.seg_core import get_retinal_layers
+from relEZIquantification_os import utils as ut
+
+from relEZIquantification_os import *
 
 
 
@@ -61,12 +63,14 @@ class Patient:
         self,
         pid: Optional[str] = None,
         dob: Optional[str] = None,
-        visits: Optional[List[OCTMap]] = None,
+        visits_OD: Optional[List[OCTMap]] = None,
+        visits_OS: Optional[List[OCTMap]] = None
 
     ) -> None:
         self.pid = pid
         self.dob = dob
-        self.visits = visits 
+        self.visits_OD = visits_OD
+        self.visits_OS = visits_OS
 
     
 
@@ -126,7 +130,8 @@ class RelEZIntensity:
             scan_size: Optional[tuple] = None,
             stackwidth: Optional[int] = None,
             patients: Optional[Dict] = {},
-            base_layer: Optional[str] = None
+            base_layer: Optional[str] = None,
+            scope_factor: Optional[int] = None,
             
             ) -> None:
         self.project = project
@@ -137,6 +142,7 @@ class RelEZIntensity:
         self.stackwidth = stackwidth
         self.patients = patients
         self.base_layer = base_layer 
+        self.scope_factor = scope_factor
         self.ssd_dir = None
         self.area_exclusion = None
         self.mean_rpedc_map = None 
@@ -208,13 +214,18 @@ class RelEZIntensity:
             
         return ez_peak, elm_peak
 
-    def get_rpe_peak(self, i_profile):
-        peaks = find_peaks(i_profile[35:45])[0]
-        if len(peaks) > 0:
-            return 35 + peaks[np.where(i_profile[35 + peaks] == max(i_profile[35 + peaks]))[0]][-1]
+    def get_rpe_peak(self, raw_roi, seg_mask_roi, start_r, i, stackwidth):
+        rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+        rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
+        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
+
+        rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+        if len(rpe_peak) >= 1:
+            return rpe_peak[-1]
         else:
-            return 38
-    
+            return None
+
+
     def get_rpedc_map(
         self,
         file_path: Union[str, Path, IO] = None,
@@ -407,9 +418,8 @@ class RelEZIntensity:
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        base_layer: Optional[str] = None,
         area_exclusion: Optional[Dict] = None,
-        *args
+        **kwargs
     ) -> None:
 
         """
@@ -425,10 +435,9 @@ class RelEZIntensity:
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
-            base_layer (Optional[str]): "vol" (default) if the layer segmentation of the vol-file ist used and "mask" if the segmentation mask of extern semantic segmentation method is used 
             area_exclusion ( Optional[Dict]): Method to determine area of exclusion 
                                             # if values (boolean) are True the area should not be analysed.
-            *args: file formats that contain the data
+            *args: project
  
  
         """
@@ -453,15 +462,14 @@ class RelEZIntensity:
             self.stackwidth = stackwidth
         
         if not ref_layer:
-            ref_layer = "BM"
-        
-        if not base_layer:
-            if not self.base_layer:
-                base_layer = self.base_layer = "vol"
-            else:
-                base_layer = self.base_layer
+            ref_layer = 11
         else:
-            self.base_layer = base_layer
+            if ref_layer == "RPE":
+                ref_layer = 10
+            elif ref_layer == "BM":
+                ref_layer = 11
+            else:
+                raise ValueError("layer name for reference layer not vaild")
 
         if not area_exclusion:
             if not self.area_exclusion:
@@ -471,18 +479,27 @@ class RelEZIntensity:
         else:
             self.area_exclusion = area_exclusion
 
+        if "scope_factor" not in kwargs.keys():
+            self.scope_factor = 2
+        else:
+            self.scope_factor = kwargs["scope_factor"] 
+
+
+
 
         # data directories
-        if args:
+        if self.project:
             if self.project == "macustar":
                 data_dict, _ = ut.get_vol_list(folder_path, self.project)
+                if "micro_ir_path" in kwargs.keys(): # check weather ID of the macustar cohort exist also in microperimetry cohort. Only ids existing in both cohorts are considered 
+                    ir_list_keys = ut.get_microperimetry_IR_image_list(kwargs["micro_ir_path"])[0].keys()
+                    for keys in list(data_dict.keys()):
+                        if keys not in ir_list_keys:
+                            del data_dict[keys]
             elif self.project == "mactel":
-                data_dict, vids = ut.get_vol_list(folder_path, self.project)
+                data_dict, pids = ut.get_vol_list(folder_path, self.project)
         else:
-            raise ValueError("no file format given")
-
-        if base_layer == "masks":
-            mask_dict = ut.get_mask_list(folder_path)
+            raise ValueError("no project name is given")
 
         if len(self.area_exclusion) == 1:
             if "rpedc" in self.area_exclusion.keys():
@@ -513,26 +530,7 @@ class RelEZIntensity:
             curr_ez_intensity = np.zeros((scan_size[0], nos))
             curr_elm_intensity = np.zeros_like(curr_ez_intensity)
             curr_excluded = np.zeros_like(curr_ez_intensity)
-            
-            
-            # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(data_dict[vol_id])
-
-            
-            # check if given number of b scans match with pre-defined number 
-            if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
-                continue
-            
-            
-            # check if mask dict contains vol id
-            if base_layer == "masks":
-                if vol_id in mask_dict.keys():
-                    mask_list = mask_dict[vol_id]
-                else:
-                    print("ID: %s considered segmentation masks not exist" % vol_id)
-                    continue
-
+                  
             
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
             try:
@@ -541,19 +539,8 @@ class RelEZIntensity:
                 print("ID %s is missing in Fovea List " % vol_id)
                 continue
             
-            
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
-            fovea_bscan = scan_size[0] - fovea_bscan
-            
-    
-            # laterality 
-            lat = vol_data._meta["ScanPosition"]
-
-            if lat == "OS": # if left eye is processed
-                fovea_ascan = scan_size[1] - fovea_ascan
-            else:
-                fovea_ascan = fovea_ascan -1
-
+            fovea_bscan = scan_size[0] - fovea_bscan +1
 
             # delta between real fovea centre and current fovea bscan position 
             d_bscan  = c_bscan - fovea_bscan
@@ -562,14 +549,32 @@ class RelEZIntensity:
 
             if not self.elm_distance_map or not self.ez_distance_map:
                 raise ValueError("Site specific distance maps not given")
-                
-                
+                           
+
+            # get data
+            ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+                vol_file_path=data_dict[vol_id],
+                model_file_path=None,
+                use_gpu=True,
+                cuda_device=0,
+                normalize_mean=0.5,
+                normalize_std=0.25,
+                cache_segmentation=True
+)
+
+            # laterality 
+            lat = ms_analysis._vol_file.header.scan_position
+
+            if lat == "OS": # if left eye is processed
+                fovea_ascan = scan_size[1] - fovea_ascan +1
+
+
             # if area_exception is "rpedc" get list of thickness maps 
             if "rpedc" in self.area_exclusion.keys():
                 if vol_id in ae_dict_1.keys():
                     rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
-                    print("ID: %s considered segmentation masks not exist" % vol_id)
+                    print("ID: %s considered rpedc map not exist" % vol_id)
                     continue
             
             # if area_exception is "rpedc" get list of thickness maps 
@@ -577,11 +582,22 @@ class RelEZIntensity:
                 if vol_id in ae_dict_2.keys():
                     rpd_map = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (int(640./241.)*d_bscan, d_ascan))
                 else:
-                    rpd_map = np.zeros(self.scan_size).astype(bool)            
+                    rpd_map = np.zeros(self.scan_size).astype(bool) 
+
+            # check if given number of b scans match with pre-defined number 
+            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                continue
+
+            # check if given number of a scans match with pre-defined number 
+            if ms_analysis._vol_file.header.size_x != scan_size[1]:
+                print("ID: %s has different number of ascans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[vol_id]), ms_analysis._vol_file.header.size_x, scan_size[1]))
+                continue  
 
             
-            for bscan, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
-                vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
+            for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
+                ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
+                ms_analysis.classes[::-1,:,:][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
@@ -593,18 +609,18 @@ class RelEZIntensity:
                 range(max([d_bscan, 0]), scan_size[0] + min([d_bscan, 0]))
                 ):
 
-                if self.base_layer == None or self.base_layer == "vol":
-                    try:
-                        layer = bscan.layers[ref_layer].astype(np.uint16)
-                    except:
-                        continue
-                if self.base_layer == "masks":
-                    layer = ut.get_seg_by_mask(mask_list[idx_r], 10) # the last argument depends on the number of layer classes of the segmentation mask
 
-                bscan_data = bscan._scan_raw
+                #if self.base_layer == None or self.base_layer == "vol":
+                #    try:
+                #        layer = bscan.layers[ref_layer].astype(np.uint16)
+                #    except:
+                #        continue
+
+
+                
                 if lat == "OS":
-                    bscan_data = np.flip(bscan_data,1)
-                    layer = np.flip(layer)
+                    bscan = np.flip(bscan,1)
+                    seg_mask = np.flip(seg_mask,1)
                 
                 
 
@@ -614,13 +630,6 @@ class RelEZIntensity:
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
                 
-                
-                # create region of interest image 
-                roi = np.zeros((50,scan_size[1])).astype(np.float32)
-                
-                for i, l in enumerate(layer):
-                    if l < 496 and l > 0:
-                        roi[:,i] = bscan_data[l-40:l+10,i]
                         
             
 # =============================================================================
@@ -630,15 +639,16 @@ class RelEZIntensity:
 #                 plot_layers(roi, imglayers)                
 # =============================================================================
                 
+                
+                # get rois
+                raw_roi, seg_mask_roi = ut.get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
+                
                 # iterate over bscans
-                for i in range(n_st):
-                    
-                    
-                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
-                        
+                for i in range(n_st):                    
+                                           
                         
                         # excluding section
-                        # excluding condition can be 
+                        # excluding condition can be:
                             
                         # a thickness map of rpedc
                         if "rpedc" in self.area_exclusion.keys():
@@ -669,22 +679,21 @@ class RelEZIntensity:
 
 
                         # a ez-loss map like in mactel project
+                        if "ezloss" in self.area_exclusion.keys():
+                            pass 
                         #...
                         # a thickness determine by the distance between bm and rpe based on segmentation layer
                         #...
-                            
-                        
-                        
-                        i_profile =  np.zeros((50, 1)).astype(np.float32)[:,0] # intensity profile
-                        for idxs, l in enumerate(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth]):
-                            if l < 496 and l > 0:
-                                i_profile = i_profile + bscan_data[l-40:l+10,start_r + i * stackwidth + idxs]
-                        i_profile/= self.stackwidth
                         
                         
                         # get rpe peak
-                        rpe_peak = self.get_rpe_peak(i_profile)
+                        rpe_peak = self.get_rpe_peak(raw_roi, seg_mask_roi, start_r, i, stackwidth)
+
+                        if not rpe_peak:
+                            continue
                         
+                        i_profile = np.nanmean(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
+
                         ez_peak, elm_peak = self.get_ez_elm_peak(i_profile,
                                                             float(rpe_peak),
                                                             ez_ssd_mean[start_w + i],
@@ -726,7 +735,7 @@ class RelEZIntensity:
                     None,
                     "REZI-Map",
                     data_dict[vol_id],
-                    vol_data._meta["VisitDate"],
+                    ms_analysis._vol_file.header.visit_date,
                     self.scan_size,
                     self.stackwidth,
                     lat,
@@ -735,31 +744,102 @@ class RelEZIntensity:
                 )            
             elif self.project == "mactel": 
                 current_map = OCTMap(
-                    vids[vol_id],
+                    vol_id,
                     "REZI-Map",
                     data_dict[vol_id],
-                    vol_data._meta["VisitDate"],
+                    ms_analysis._vol_file.header.visit_date,
                     self.scan_size,
                     self.stackwidth,
                     lat,
                     (fovea_ascan, fovea_bscan), # (x,y)
                     maps_data
-                )       
+                )
+
+            if self.project == "macustar":    
         
-            if vol_id in self.patients.keys():
+                if vol_id in self.patients.keys():
                 
-                # not yet tested
-                for i, visit in enumerate(self.patients[vol_id].visits):
-                    if visit.date_of_origin < current_map.date_of_origin:
-                        continue
-                    if visit.date_of_origin > current_map.date_of_origin:
-                        self.patients[vol_id].visits.insert(current_map, i)
-                        break
-            else:
-                self.patients[vol_id] = Patient(
+                    if current_map.laterality == "OD":
+                        if self.patients[vol_id].visits_OD:
+                            for i, visit in enumerate(self.patients[vol_id].visits_OD):
+                                if visit.date_of_origin >= current_map.date_of_origin:
+                                    self.patients[vol_id].visits_OD.insert(i, current_map)
+                                    break
+                                else:
+                                    self.patients[vol_id].visits_OD.insert(i+1, current_map)
+                                    break                                    
+                        else:
+                            self.patients[vol_id].visits_OD = [current_map]
+                    else:
+                        if self.patients[vol_id].visits_OS:
+                            for i, visit in enumerate(self.patients[vol_id].visits_OS):
+                                if visit.date_of_origin >= current_map.date_of_origin:
+                                    self.patients[vol_id].visits_OS.insert(i, current_map)
+                                    break
+                                else:
+                                    self.patients[vol_id].visits_OS.insert(i+1, current_map)
+                                    break  
+                        else:
+                            self.patients[vol_id].visits_OS = [current_map]
+
+                else:
+                    if current_map.laterality == "OD":
+                        self.patients[vol_id] = Patient(
                                             vol_id,
-                                            vol_data._meta["DOB"],
-                                            [current_map])
+                                            ms_analysis._vol_file.header.birthdate,
+                                            [current_map], # visit OD
+                                            None)
+                    else:
+                        self.patients[vol_id] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            None,
+                                            [current_map] # visit OS
+                                            )
+
+            if self.project == "mactel":    
+        
+                if pids[vol_id] in self.patients.keys():
+
+                    if current_map.laterality == "OD":
+                        if self.patients[pids[vol_id]].visits_OD:
+                            for i, visit in enumerate(self.patients[pids[vol_id]].visits_OD):
+                                if visit.date_of_origin >= current_map.date_of_origin:
+                                    self.patients[pids[vol_id]].visits_OD.insert(i, current_map)
+                                    break
+                                else:
+                                    self.patients[pids[vol_id]].visits_OD.insert(i+1, current_map)
+                                    break  
+                        else:
+                            self.patients[pids[vol_id]].visits_OD = [current_map]
+                    else:
+                        if self.patients[pids[vol_id]].visits_OS:
+                            for i, visit in enumerate(self.patients[pids[vol_id]].visits_OS):
+                                if visit.date_of_origin >= current_map.date_of_origin:
+                                    self.patients[pids[vol_id]].visits_OS.insert(i, current_map)
+                                    break
+                                else:
+                                    self.patients[pids[vol_id]].visits_OS.insert(i+1, current_map)
+                                    break  
+                        else:
+                            self.patients[pids[vol_id]].visits_OS = [current_map]
+
+                else:
+                    if current_map.laterality == "OD":
+                        self.patients[pids[vol_id]] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            [current_map], # visit OD
+                                            None)
+                    else:
+                        self.patients[pids[vol_id]] = Patient(
+                                            vol_id,
+                                            ms_analysis._vol_file.header.birthdate,
+                                            None,
+                                            [current_map] # visit OS
+                                            )
+                
+            
                         
     def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
 
@@ -787,13 +867,10 @@ class RelEZIntensity:
 
             # get slo image 
             slo_img = vol.slo_image
-            h_slo, w_slo = slo_img.shape
 
 
             # laterality 
             lat = self.patients[keys].visits[visit -2].laterality
-
-
 
             stimuli_s = ut.get_microperimetry(
                 df,
@@ -809,9 +886,7 @@ class RelEZIntensity:
                 lat,
                 "M")
 
-        
-
-            # create grid coords
+           # create grid coords
             px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
             ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
             ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
@@ -862,70 +937,27 @@ class RelEZIntensity:
             # transform slo_img
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
-            # get microperimetry IR image m and s
-            img1_raw_m = cv2.imread(ir_list_m[self.patients[keys].pid],0)
-            img1_raw_s = cv2.imread(ir_list_s[self.patients[keys].pid],0)
-            (h_micro, w_micro) = img1_raw_m.shape[:2]
+            mask_iamd_m, stimuli_m_map = ut.get_microperimetry_maps(
+                    ir_list_m[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_m,
+                    x,y)
 
-            # rotated IR image 
-            (cX, cY) = (w_micro // 2, h_micro // 2)
-            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
-            img1_raw_m = cv2.warpAffine(img1_raw_m, M, (w_micro, h_micro))
-            img1_raw_s = cv2.warpAffine(img1_raw_s, M, (w_micro, h_micro))
+            mask_iamd_s, stimuli_s_map = ut.get_microperimetry_maps(
+                    ir_list_s[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_s,
+                    x,y)
 
-            # flip microperimetry-IR image
-            if lat == "OS":
-                img1_raw_m = np.flip(img1_raw_m, 1)
-                img1_raw_s = np.flip(img1_raw_s, 1)
-
-            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
-            offset = int((h_micro/36) * 3)
-            img1_m = img1_raw_m[offset:-offset,offset:-offset]
-            img1_m = cv2.resize(img1_m,(h_slo,w_slo))
-            img1_s = img1_raw_s[offset:-offset,offset:-offset]
-            img1_s = cv2.resize(img1_s,(h_slo,w_slo))
-
-
-            # calculate affine transformation matrix A
-            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_m, slo_img)
-            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(img1_s, slo_img)
-        
-
-            # transform grid
-            grid_coords = np.zeros((3,len(x)))
-            grid_coords[0,:] = x
-            grid_coords[1,:] = y
-            grid_coords[2,:] = np.ones((1,len(x)))
-
-            grid_coords_transf_m = H_m @ grid_coords
-            grid_coords_transf_s = H_s @ grid_coords
-
-            x_new_m = (grid_coords_transf_m[0,:] * (30/ 768)) 
-            y_new_m = ((grid_coords_transf_m[1,:] - 64) * (25 / 640))
-
-            x_new_s = (grid_coords_transf_s[0,:] * (30/ 768))
-            y_new_s = ((grid_coords_transf_s[1,:] - 64) * (25 / 640))
-
-            # create binary image with iamd grid 
-            mask_iamd_m = np.zeros((self.scan_size[0],self.scan_size[1] // self.stackwidth))
-            mask_iamd_s = np.zeros_like(mask_iamd_m)
-            stimuli_m_map = np.zeros_like(mask_iamd_m)
-            stimuli_s_map = np.zeros_like(mask_iamd_m)
-
-            
-            yy,xx = np.mgrid[:241,:(768 // self.stackwidth)]
-
-            xx = xx * (30/(768 // self.stackwidth))
-            yy = yy * (25/241
-            )
-            for idx in range(33):            
-                mask_iamd_m[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = idx
-                mask_iamd_s[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) < radius ** 2] = idx
-                stimuli_m_map[((yy - y_new_m[idx]) ** 2) + ((xx - x_new_m[idx])**2) < radius ** 2] = stimuli_m[idx]
-                stimuli_s_map[((yy - y_new_s[idx]) ** 2) + ((xx - x_new_s[idx])**2) < radius ** 2] = stimuli_s[idx]
-                
-
-            
+    
             self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
             self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
             self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
@@ -1108,12 +1140,11 @@ class RelEZIntensity:
     def create_ssd_maps(
         self,
         folder_path: Union[str, Path, IO] = None,
+        project: Optional[str] = None,
         fovea_coords: Optional[Dict] = None,
         scan_size: Optional[tuple] = None,
         stackwidth: Optional[int] = None,
         ref_layer: Optional[str] = None,
-        base_layer: Optional[str] = None,
-        *args
     ) -> None:
 
         """
@@ -1128,9 +1159,6 @@ class RelEZIntensity:
                 y (int): Number of A-scans
             stackwidth (Optional[int]): number of columns for a single profile
             ref_layer (Optional[str]): layer to flatten the image 
-            base_layer (Optional[str]): pre segmented layer 
-                "masks": if segmentation mask is used
-                "vol": if segmentation by .vol-file is used
             *args: file formats that contain the data
         """
         
@@ -1138,6 +1166,10 @@ class RelEZIntensity:
             fovea_coords = self.fovea_coords
         else:
             self.fovea_coords = fovea_coords
+        if not project:
+            project = self.project
+        else:
+            self.project = project
         if not scan_size:
             scan_size = self.scan_size
         else:
@@ -1147,26 +1179,27 @@ class RelEZIntensity:
         else:
             self.stackwidth = stackwidth
         if not ref_layer:
-            ref_layer = "BM"
-        if not base_layer:
-            if not self.base_layer:
-                base_layer = self.base_layer = "vol"
-            else:
-                base_layer = self.base_layer
+            ref_layer = 11
         else:
-            self.base_layer = base_layer
+            if ref_layer == "RPE":
+                ref_layer = 10
+            elif ref_layer == "BM":
+                ref_layer = 11
+            else:
+                raise ValueError("layer name for reference layer not vaild")
+
 
 
         # data directories
-        if args:
-            data_dict = ut.get_list_by_format(folder_path, args)
+        if self.project:
+            if self.project == "macustar":
+                data_dict, _ = ut.get_vol_list(folder_path, self.project)
+            elif self.project == "mactel":
+                data_dict, pids = ut.get_vol_list(folder_path, self.project)
         else:
-            raise ValueError("no file format given")
+            raise ValueError("no project name is given")
 
-        if base_layer == "masks":
-            mask_dict = ut.get_mask_list(folder_path)
 
-        
         # central bscan/ascan, number of stacks (nos)
         c_bscan = scan_size[0] // 2 + scan_size[0] % 2
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
@@ -1177,37 +1210,38 @@ class RelEZIntensity:
 
         
         # iterate  over .vol-list
-        for vol_id in data_dict[".vol"]:
+        for vol_id in data_dict:
 
             # current distance map
             curr_ez_distance = np.empty((1, scan_size[0], nos))
             curr_ez_distance[:] = np.nan
             curr_elm_distance = np.full_like(curr_ez_distance, np.nan)
             
-            # get vol data from file
-            vol_data = ep.Oct.from_heyex_vol(data_dict[".vol"][vol_id])
-
-
-            # check if given number of b scans match with pre-defined number 
-            if vol_data._meta["NumBScans"] != scan_size[0]:
-                print("ID: %s has different number of bscans (%i) than expected (%i)" % (ut.get_id_by_file_path(data_dict[".vol"][vol_id]), vol_data._meta["NumBScans"], scan_size[0]))
-                continue
-
-            # check if mask dict contains vol id
-            if base_layer == "masks":
-                if vol_id in mask_dict.keys():
-                    mask_list = mask_dict[vol_id]
-                else:
-                    print("ID: %s considered segmentation mask not exist" % vol_id)
 
             # d_bscan (int): delta_bscan = [central bscan (number of bscans // 2)] - [current bscan]
-            fovea_bscan, fovea_ascan = fovea_coords[ut.get_id_by_file_path(data_dict[".vol"][vol_id])]
+            try:
+                fovea_bscan, fovea_ascan = fovea_coords[vol_id]
+            except:
+                print("ID %s is missing in Fovea List " % vol_id)
+                continue
             
             # change orientation from top down, subtract on from coords to keep 0-indexing of python            
             fovea_bscan = scan_size[0] - fovea_bscan
 
+            
+            # get data
+            ms_analysis = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+                vol_file_path=data_dict[vol_id],
+                model_file_path=None,
+                use_gpu=True,
+                cuda_device=0,
+                normalize_mean=0.5,
+                normalize_std=0.25,
+                cache_segmentation=True
+)
+
             # laterality 
-            lat = vol_data._meta["ScanPosition"]
+            lat = ms_analysis._vol_file.header.scan_position
 
             if lat == "OS": # if left eye is processed
                 fovea_ascan = scan_size[1] - fovea_ascan
@@ -1217,26 +1251,21 @@ class RelEZIntensity:
             d_bscan  = c_bscan - fovea_bscan
 
 
-            for bscan, ez, elm, idx in zip(
-                vol_data[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read
+            # check if given number of b scans match with pre-defined number 
+            if ms_analysis._vol_file.header.num_bscans != scan_size[0]:
+                print("ID: %s has different number of bscans (%i) than expected (%i)" % (vol_id, ms_analysis._vol_file.header.num_bscans, scan_size[0]))
+                continue
+            
+            for bscan, seg_mask, ez, elm in zip(
+                ms_analysis._vol_file.oct_volume_raw[::-1][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
+                ms_analysis.classes[::-1,:,:][max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                 curr_ez_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                 curr_elm_distance[0, max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
-                range(max([-d_bscan, 0]), scan_size[0] + min([-d_bscan, 0]))
                 ):
                 
-
-                if self.base_layer == None or self.base_layer == "vol":
-                    try:
-                        layer = bscan.layers[ref_layer].astype(np.uint16)
-                    except:
-                        continue
-                if self.base_layer == "masks":
-                    layer = ut.get_seg_by_mask(mask_list[idx], 10)
-                
-                bscan_data = bscan._scan_raw
                 if lat == "OS":
-                    bscan_data = np.flip(bscan_data,1)
-                    layer = np.flip(layer)
+                    bscan = np.flip(bscan,1)
+                    seg_mask = np.flip(seg_mask,1)
                 
                 # get start position to read data
                 d_ascan = c_ascan - fovea_ascan
@@ -1245,64 +1274,62 @@ class RelEZIntensity:
                 start_w = max([((c_ascan - (stackwidth//2)) // stackwidth) - (fovea_ascan - (stackwidth//2)) // stackwidth, 0])
                 n_st = (scan_size[1] - start_r - max([d_ascan,0])) // stackwidth # possible number of stacks 
                 
+
+                # get rois
+                raw_roi, seg_mask_roi = ut.get_roi_masks(bscan, ref_layer, scan_size, seg_mask)
                 
-                # create region of interest image 
-                roi = np.zeros((50,scan_size[1])).astype(np.float32)
-                
-                for i, l in enumerate(layer):
-                    if l < 496 and l > 0:
-                        roi[:,i] = bscan_data[l-40:l+10,i]
-                        
-            
-                # get ez and rpe boundary 
-                imglayers = get_retinal_layers(roi) 
-                
-                #if idx == 123:
-                 #   plot_layers(roi, imglayers)
-                
-                
+
                 for i in range(n_st):
+
+                    rpe_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+                    rpe_roi[np.logical_and(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 9,
+                    seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 10)] = np.nan
+
+                    rpe_peak = find_peaks(np.nanmean(rpe_roi,1))[0]
+                    if len(rpe_peak) >= 1:
+                        rpe_peak = rpe_peak[-1]
+                    else:
+                        rpe_peak = None
+
+
+                    ez_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+                    ez_roi[np.roll( # use erosion to expand the search area by one on both sides
+                        seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8,
+                        -2)] = np.nan
+
+                    ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
+                    if len(ez_peak) == 1:
+                        ez_peak = ez_peak[0]
+                    elif len(ez_peak) == 2:
+                        if ez_peak[0] == np.max(ez_peak):
+                            ez_peak = ez_peak[0]
+                        else:
+                            ez_peak = None
+                    else:
+                        ez_peak = None
                     
-                    if not any(np.isnan(layer[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])):
+        
+                    elm_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
+                    elm_roi[seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 7 ] = np.nan
 
-                        i_profile = np.mean(roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth],1)
-
-
-                        rpe_grad = int(
-                            np.round(
-                                np.max(imglayers["rpe"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
-
-                        ez_grad = int(
-                            np.round(
-                                np.min(imglayers["isos"].layerY[start_r + i * stackwidth: start_r + (i + 1) * stackwidth])))
-                        
-                        ez_peak  = ez_grad - 2 + np.where(i_profile[ez_grad - 2:ez_grad + 5] == np.max(i_profile[ez_grad - 2:ez_grad + 5]))[0][0]
-
-                        rpe_peak = find_peaks(i_profile[rpe_grad - 5:rpe_grad + 2], height=0)[0]
-                        if len(rpe_peak) > 0:
-                            rpe_peak = rpe_grad - 5 + rpe_peak[-1]
-                        else:
-                            rpe_peak = None                        
-                        
-                        
-                        elm_peak = find_peaks(i_profile[ez_peak - 10:ez_peak], height=0)[0]
-                        if len(elm_peak) > 0:
-                            elm_peak = ez_peak - 10 + elm_peak[-1]
-                        else:
-                            elm_peak = None
-                            
+                    elm_peak = find_peaks(np.nanmean(elm_roi,1))[0]
+                    if len(elm_peak) >= 1:
+                        elm_peak = elm_peak[0]
+                    else:
+                        elm_peak = None                    
                             
                         #plt.plot(np.arange(len(i_profile)), i_profile,
                         #             rpe_peak, i_profile[rpe_peak], "x",
                         #             ez_peak, i_profile[ez_peak], "x",
                         #             elm_peak, i_profile[elm_peak], "x")
                         
-                        # set distances
-                        if rpe_peak:
-                            if ez_peak:
-                                ez[start_w + i] = rpe_peak - ez_peak
-                            if elm_peak:
-                                elm[start_w + i] = rpe_peak - elm_peak
+
+                    # set distances
+                    if rpe_peak:
+                        if ez_peak:
+                            ez[start_w + i] = rpe_peak - ez_peak
+                        if elm_peak:
+                            elm[start_w + i] = rpe_peak - elm_peak
 
 
             ez_distance = np.append(ez_distance, curr_ez_distance, axis=0)
@@ -1457,31 +1484,33 @@ class RelEZIntensity:
             project (str): project name like Macustar
             
         """
-        nos = self.scan_size[1] // self.stackwidth
-        d_a_scan = scan_field[1] / nos
-        d_b_scan = scan_field[0] / self.scan_size[0]
+        nos = self.scan_size[1] // self.stackwidth # number of stacks
+        d_a_scan = scan_field[1] / nos # distance between stacks in degree
+        d_b_scan = scan_field[0] / self.scan_size[0] # distance between b-scans in degree
         a_scan_mesh, b_scan_mesh = np.meshgrid(
                     np.arange(-scan_field[1]/2, scan_field[1]/2,d_a_scan),
                     np.arange(-scan_field[0]/2, scan_field[0]/2,d_b_scan))
-        a_scan_mesh = a_scan_mesh.flatten()
-        b_scan_mesh = b_scan_mesh.flatten()
+        a_scan_mesh = a_scan_mesh.flatten() # serialized a-scan mesh
+        b_scan_mesh = b_scan_mesh.flatten() # serialized a-scan mesh
         
-        b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten()
+        b_scan_n = (np.ones((nos, self.scan_size[0])) * np.arange(1, self.scan_size[0] + 1,1)).T.flatten() # b-scan number
     
         if project == "macustar micro":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]",
-             "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "m stimulus", "m stimulus grid", "m stimulus", "ez", "elm"]
+             "druse(y/n)", "rpd(y/n)", "atrophy", "m stimulus grid", "s stimulus", "s stimulus grid", "m stimulus", "ez", "elm"]
         elif project == "macustar":
             header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "druse(y/n)", "ez", "elm"]
+        elif project == "mactel":
+            header = ["ID", "eye", "b-scan", "visit date", "A-Scan [°]", "B-Scan [°]", "ezloss(y/n)", "ez", "elm"]
 
         if os.path.isdir(folder_path):
-            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"),  {'nan_inf_to_errors': True})
             worksheet = workbook.add_worksheet()
             worksheet.write_row(0, 0, header)
             
         else:
             os.path.mkdir(folder_path)
-            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"))
+            workbook = xls.Workbook(os.path.join(folder_path, project + "_0.xlsx"),  {'nan_inf_to_errors': True})
             worksheet = workbook.add_worksheet()            
             worksheet.write_row(0, 0, header)
             
@@ -1489,49 +1518,94 @@ class RelEZIntensity:
         
         if project == "macustar micro":
             for i, ids in enumerate(self.patients.keys()):
+
+                if len(self.patients[ids].visits_OD) > 0:
             
-                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                    for j, visit in enumerate(self.patients[ids].visits_OD): # if more than one visit is given, the sheet is extended to the right
                 
-                    worksheet.write(row, j * len(header), ids) # ID
-                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
-                    worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
-                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
-                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
-                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
-                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
-                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
-                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
-                    worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
-                    worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
-                    worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
-                    worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
-                    worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
-                    worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
+                        worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
+                        worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
+                        worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
+                        worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
+                        worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
+                        worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
+
+                if len(self.patients[ids].visits_OS) > 0:
+            
+                    for j, visit in enumerate(self.patients[ids].visits_OS): # if more than one visit is given, the sheet is extended to the right
+                
+                        worksheet.write(row, j * len(header), "313" + "".join(i for i in ids.split("-"))) # ID
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality]) # Eye
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n) # bscan
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d")) # Visit Date
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh) # A-scan
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh) # B-scan
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["rpedc"].flatten()) # Druse
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["rpd"].flatten()) # RPD
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["atrophy"].flatten()) # Atrophy
+                        worksheet.write_column(row, j * len(header) + 9, visit.octmap["micro_mask_m"].flatten()) # Mask micro m
+                        worksheet.write_column(row, j * len(header) + 10, visit.octmap["micro_stim_m"].flatten()) # Stimulus micro m
+                        worksheet.write_column(row, j * len(header) + 11, visit.octmap["micro_mask_s"].flatten()) # Mask micro s
+                        worksheet.write_column(row, j * len(header) + 12, visit.octmap["micro_stim_s"].flatten()) # Stimulus micro s
+                        worksheet.write_column(row, j * len(header) + 13, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 14, visit.octmap["elm"].flatten())
                    
                 row += nos * self.scan_size[0]
             
                 if (i +1) % n == 0 and i < len(self.patients.keys()) -1:
                     workbook.close()
-                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"))
+                    workbook = xls.Workbook(os.path.join(folder_path, project + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
                     worksheet = workbook.add_worksheet()            
                     worksheet.write_row(0, 0, header)   
                     row = 1
 
 
-        if project == "macutar":
+        if project == "macutar" or project == "mactel":
             for i, ids in enumerate(self.patients.keys()):
+
+                if len(self.patients[ids].visits_OD) > 0:
             
-                for j, visit in enumerate(self.patients[ids].visits): # if more than one visit is given, the sheet is extended to the right
+                    for j, visit in enumerate(self.patients[ids].visits_OD): # if more than one visit is given, the sheet is extended to the right
+                        
+                        if project == "macutar":
+                            worksheet.write(row, j * len(header), ids)
+                        else:
+                            worksheet.write(row, j * len(header), visit.vid)
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+
+                if len(self.patients[ids].visits_OS) > 0:
+            
+                    for j, visit in enumerate(self.patients[ids].visits_OS): # if more than one visit is given, the sheet is extended to the right
                 
-                    worksheet.write(row, j * len(header), ids)
-                    worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
-                    worksheet.write_column(row, j * len(header) + 2, b_scan_n)
-                    worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
-                    worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
-                    worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
-                    worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
-                    worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
-                    worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
+                        
+                        if project == "macutar":
+                            worksheet.write(row, j * len(header), ids)
+                        else:
+                            worksheet.write(row, j * len(header), visit.vid)
+                        worksheet.write_column(row, j * len(header) + 1, nos * self.scan_size[0] * [visit.laterality])
+                        worksheet.write_column(row, j * len(header) + 2, b_scan_n)
+                        worksheet.write(row, j * len(header) + 3, visit.date_of_origin.strftime("%Y-%m-%d"))
+                        worksheet.write_column(row, j * len(header) + 4, a_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 5, b_scan_mesh)
+                        worksheet.write_column(row, j * len(header) + 6, visit.octmap["exc"].flatten())
+                        worksheet.write_column(row, j * len(header) + 7, visit.octmap["ez"].flatten())
+                        worksheet.write_column(row, j * len(header) + 8, visit.octmap["elm"].flatten())
                    
                 row += nos * self.scan_size[0]
             
@@ -1541,6 +1615,9 @@ class RelEZIntensity:
                     worksheet = workbook.add_worksheet()            
                     worksheet.write_row(0, 0, header)   
                     row = 1
+
+
+
                 
         workbook.close()        
                 
