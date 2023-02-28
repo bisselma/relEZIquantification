@@ -1,2 +1,2 @@
-# rel_ez_intensity
+# relEZIquantification
 To be described
