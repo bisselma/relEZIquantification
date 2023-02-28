@@ -275,7 +275,7 @@ class SSDmap:
 
 
                     ez_roi = np.copy(raw_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth])
-                    ez_roi[np.roll(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8, -3)] = np.nan
+                    ez_roi[np.roll(seg_mask_roi[:,start_r + i * stackwidth: start_r + (i + 1) * stackwidth] != 8, -1)] = np.nan
 
                     ez_peak = find_peaks(np.nanmean(ez_roi,1))[0]
                     if len(ez_peak) == 1:
