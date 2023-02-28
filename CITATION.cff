@@ -14,45 +14,45 @@ authors:
 repository-code: 'https://github.com/bisselma/relEZIquantification.git'
 url: 'https://github.com/bisselma/relEZIquantification'
 abstract: >
-  Diese Software wurde entwickelt, um die relative
-  EZ-Intensität (relEZI) aus OCT-Volumenscans zu
-  quantifizieren. Die relEZI ergibt sich aus dem Verhältnis
-  zwischen der Intensität der EZ (ellipsoid zone) und der
-  ELM (external limiting membrane). Die zugrunde liegende
-  Methode wurde in der Validierungsarbeit von Thiele et al.
-  entwickelt und validiert (Thiele S, Isselmann B, Pfau M,
-  Holz FG, Schmitz-Valckenberg S, Wu Z, Guymer RH, Luu CD.
-  Validation of an Automated Quantification of Relative
-  Ellipsoid Zone Reflectivity on Spectral Domain-Optical
-  Coherence Tomography Images. Transl Vis Sci Technol. 2020
-  Oct 14;9(11):17. doi: 10.1167/tvst.9.11.17. PMID:
-  33133775; PMCID: PMC7581490.). 
+  This software was developed to quantify the relative EZ
+  intensity (relEZI) from OCT volume scans. The relEZI is
+  derives by the ratio between the Intensity of the EZ
+  (ellipsoid zone ) and the ELM (external limiting
+  membrane). The underlying method was developed and
+  validated in the validation paper by Thiele et al. (Thiele
+  S, Isselmann B, Pfau M, Holz FG, Schmitz-Valckenberg S, Wu
+  Z, Guymer RH, Luu CD. Validation of an Automated
+  Quantification of Relative Ellipsoid Zone Reflectivity on
+  Spectral Domain-Optical Coherence Tomography Images.
+  Transl Vis Sci Technol. 2020 Oct 14;9(11):17. doi:
+  10.1167/tvst.9.11.17. PMID: 33133775; PMCID:
+  PMC7581490.). 
 
 
-  Erwähnenswert sind die verwendeten Modelle, die in
-  verschiedenen Teilen der Software zum Einsatz kommen. Für
-  die Bildregistrierung wird das SuperRetina Repository
-  verwendet. (Liu, J., Li, X., Wei, Q., Xu, J., & Ding, D.
-  (2022, Oktober). Semi-supervised Keypoint Detector and
-  Descriptor for Retinal Image Matching. In Computer
-  Vision-ECCV 2022: 17th European Conference, Tel Aviv,
-  Israel, October 23-27, 2022, Proceedings, Part XXI (pp.
-  593-609). Cham: Springer Nature Switzerland.). 
+  It is worth mentioning used models, which are used in
+  different parts of the software. For image registration
+  the SuperRetina Repository is used. (Liu, J., Li, X., Wei,
+  Q., Xu, J., & Ding, D. (2022, October). Semi-supervised
+  Keypoint Detector and Descriptor for Retinal Image
+  Matching. In Computer Vision–ECCV 2022: 17th European
+  Conference, Tel Aviv, Israel, October 23–27, 2022,
+  Proceedings, Part XXI (pp. 593-609). Cham: Springer Nature
+  Switzerland.). 
 
-  Für die starre Transformation von Voxeln wird die
-  simpleITK-Bibliothek verwendet (R. Beare, B. C. Lowekamp,
-  Z. Yaniv, "Image Segmentation, Registration and
-  Characterization in R with SimpleITK", J Stat Softw,
-  86(8), doi: 10.18637/jss.v086.i08, 2018.
+  For rigid transformation of voxels, the simpleITK libary
+  is used (R. Beare, B. C. Lowekamp, Z. Yaniv, “Image
+  Segmentation, Registration and Characterization in R with
+  SimpleITK”, J Stat Softw, 86(8), doi:
+  10.18637/jss.v086.i08, 2018.
 
   Z. Yaniv, B. C. Lowekamp, H. J. Johnson, R. Beare,
-  "SimpleITK Image-Analysis Notebooks: a Collaborative
-  Environment for Education and Reproducible Research", J
-  Digit Imaging, doi: 10.1007/s10278-017-0037-8, 31(3):
+  “SimpleITK Image-Analysis Notebooks: a Collaborative
+  Environment for Education and Reproducible Research”, J
+  Digit Imaging., doi: 10.1007/s10278-017-0037-8, 31(3):
   290-303, 2018.
 
-  B. C. Lowekamp, D. T. Chen, L. Ibáñez, D. Blezek, "The
-  Design of SimpleITK", Front. Neuroinform., 7:45. doi:
+  B. C. Lowekamp, D. T. Chen, L. Ibáñez, D. Blezek, “The
+  Design of SimpleITK”, Front. Neuroinform., 7:45. doi:
   10.3389/fninf.2013.00045, 2013.).
 keywords:
   - relative EZ intensity
