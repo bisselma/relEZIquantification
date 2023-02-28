@@ -104,12 +104,12 @@ def get_ez_elm_peak(i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
             return 0, 0
 
         # find ez and elm peaks
-        left_border = int(np.round(rpe_peak - elm_mean - np.max(1, 2. * elm_std)))
+        left_border = int(np.round(rpe_peak - elm_mean - max(1, 2. * elm_std)))
         peaks = left_border + find_peaks(i_profile[left_border : int(rpe_peak)])[0]
 
         # get search area. If 2*std is lower 1 the default value is 1                
-        ez_left = int(np.round(rpe_peak - ez_mean - np.max(2. * ez_std, 1)))
-        ez_right = int(np.round(rpe_peak - ez_mean + np.max(2. * ez_std, 1)))                        
+        ez_left = int(np.round(rpe_peak - ez_mean - max(2. * ez_std, 1)))
+        ez_right = int(np.round(rpe_peak - ez_mean + max(2. * ez_std, 1)))                        
         
 
         ez_peaks = peaks[np.logical_and(peaks >= ez_left, peaks <= ez_right)]
@@ -128,13 +128,13 @@ def get_ez_elm_peak(i_profile, rpe_peak, ez_mean, ez_std, elm_mean, elm_std):
         
         
         # get search area. If 2*std is lower 1 the default value is 1 
-        elm_left = int(np.round(rpe_peak - elm_mean - np.max(2. * elm_std, 1)))
+        elm_left = int(np.round(rpe_peak - elm_mean - max(2. * elm_std, 1)))
 
         # if ez_peak is in search area of elm the next left position to the ez peak is right border of search area
-        if ez_peak <= int(np.round(rpe_peak - elm_mean + np.max(2. * elm_std, 1))):
+        if ez_peak <= int(np.round(rpe_peak - elm_mean + max(2. * elm_std, 1))):
             elm_right = ez_peaks -1 
         else:
-            elm_right = int(np.round(rpe_peak - elm_mean + np.max(2. * elm_std, 1)))
+            elm_right = int(np.round(rpe_peak - elm_mean + max(2. * elm_std, 1)))
         
                         
         elm_peaks = peaks[np.logical_and(peaks >= elm_left, peaks <= elm_right)]
