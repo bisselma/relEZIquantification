@@ -1,2 +1,2 @@
 # relEZIquantification
-To be described
+![illustration](./paper/profile.jpg)
