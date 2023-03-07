@@ -1,2 +1,3 @@
 # relEZIquantification
-![illustration](./paper/profile.jpg)
+<img src="./paper/profile.jpg" width="100" height="100">
+
