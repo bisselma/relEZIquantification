@@ -2,8 +2,13 @@
 from pathlib import Path
 from typing import Optional, Union, IO
 from datetime import date
+import pandas as pd
+
+
 from relEZIquantification import utils as ut
 from relEZIquantification.relEZIquantification_projects import *
+
+
 
 class RelEZIQuantification:
 

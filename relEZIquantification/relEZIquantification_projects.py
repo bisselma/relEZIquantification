@@ -1,30 +1,19 @@
 # -*- coding: utf-8 -*- 
 from pathlib import Path
-from timeit import repeat
-from typing import Callable, Dict, List, Optional, Union, IO
-from unicodedata import name
+from typing import Dict, List, Optional, Union, IO
 import numpy as np
-import matplotlib.pyplot as plt
 from PIL import Image
-from scipy.stats import moment
-from scipy.signal import find_peaks
 from scipy.ndimage import shift
 from datetime import date
-import pickle
 import os
 import xlsxwriter as xls
-from scipy.ndimage.morphology import binary_dilation, binary_closing
+from scipy.ndimage.morphology import binary_dilation
 from  skimage.morphology import disk
-from read_roi import read_roi_zip
-import pandas as pd
 from PIL import Image
 
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
 
-from relEZIquantification.getAdjacencyMatrix import plot_layers
-from relEZIquantification.seg_core import get_retinal_layers
-from relEZIquantification import utils as ut
 
 from relEZIquantification.relEZIquantification_structure import *
 
@@ -1360,14 +1349,14 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         # get lists of exclusion data 
         for exclusion_type in area_exclusion.keys():
             if exclusion_type == "rpedc":
-                ae_dict_1 = ut.get_rpedc_list(self.data_folder)
+                ae_dict_1 = get_rpedc_list(self.data_folder)
                 self.update_header(-2, "druse(y/n)") 
                 if "atrophy" in area_exclusion.keys():
                     self.update_header(-2, "atrophy(y/n)")
                 if len(ae_dict_1.keys()) == 0:
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
             if exclusion_type == "rpd":
-                ae_dict_2 = ut.get_rpd_list(self.data_folder)
+                ae_dict_2 = get_rpd_list(self.data_folder)
                 self.update_header(-2, "rpd(y/n)")
 
 

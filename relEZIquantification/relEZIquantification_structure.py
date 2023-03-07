@@ -1,23 +1,12 @@
 # -*- coding: utf-8 -*- 
 from pathlib import Path
-from timeit import repeat
-from typing import Callable, Dict, List, Optional, Union, IO
-from unicodedata import name
+from typing import Dict, List, Optional, Union, IO
 import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-from scipy.stats import moment
 from scipy.signal import find_peaks
 from scipy.ndimage import shift
 from datetime import date
 import pickle
 import os
-import xlsxwriter as xls
-from scipy.ndimage.morphology import binary_dilation, binary_erosion
-from read_roi import read_roi_zip
-import pandas as pd
-
-import eyepy as ep
 
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
@@ -465,7 +454,7 @@ class Mean_rpedc_map(Distance_map):
         c_ascan = scan_size[1] // 2 + scan_size[1] % 2
             
         # get list of all rpedc maps
-        rpedc_list = ut.get_rpedc_list(folder_path)
+        rpedc_list = get_rpedc_list(folder_path)
         
         
         rpedc_thickness = np.empty(shape=[0, 640, scan_size[1]])
@@ -485,8 +474,8 @@ class Mean_rpedc_map(Distance_map):
                 fovea_bscan = scan_size[0] - (fovea_bscan +1) 
 
                 # laterality 
-                vol_data = ep.Oct.from_heyex_vol(data_list[ids])
-                lat = vol_data._meta["ScanPosition"]
+                vol_file = vol_reader.VolFile(data_list[ids])
+                lat = vol_file.header.scan_position
 
                 if lat == "OS": # if left eye is processed
                     fovea_ascan = scan_size[1] - (fovea_ascan +1)
@@ -550,7 +539,7 @@ class Mean_rpedc_map(Distance_map):
             filename = "mean_rpedc"
         
         if directory:
-            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            obj_list = get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
                 if filename in file:
                     with open(file, 'rb') as inp:
