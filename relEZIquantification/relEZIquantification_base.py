@@ -5,7 +5,6 @@ from datetime import date
 import pandas as pd
 
 
-from relEZIquantification import utils as ut
 from relEZIquantification.relEZIquantification_projects import *
 
 
@@ -124,7 +123,7 @@ class RelEZIQuantification:
             directory = self.file_location
             
         if directory:
-            obj_list = ut.get_list_by_format(directory, [".pkl"])
+            obj_list = get_list_by_format(directory, [".pkl"])
             for file in obj_list[".pkl"]:
                 if filename in file:
                     with open(file, 'rb') as inp:
