@@ -974,7 +974,10 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         slon = rotate_slo(slon, grid, scan_field) 
 
                         # Matrix H
-                        H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0) 
+                        H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0)
+                        if not H:
+                            print("%d: Registration failed" % (ids))
+                            continue
 
                         # setup transformation
 
