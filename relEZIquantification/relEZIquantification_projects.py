@@ -1236,7 +1236,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         
                     # standard entries
                     worksheet.write_column(row,  0, np.array(["SeriesUID: " + str(map._series_uid) + " (PID: " + str(ids) + ")", 
-                                                            "y-direction in mm:" + map._scan_area[0],"x-direction in mm:" + map._scan_area[1]])) # ID and scan area
+                                                            "y-direction in mm:" + str(map._scan_area[0]),"x-direction in mm:" + str(map._scan_area[1])])) # ID and scan area
                     worksheet.write_column(row,  1, nos * self.scan_size[0] * [map.laterality]) # Eye
                     worksheet.write_column(row,  2, b_scan_n) # bscan
                     worksheet.write(row,         3, visit.date_of_recording.strftime("%Y-%m-%d")) # Visit Date
