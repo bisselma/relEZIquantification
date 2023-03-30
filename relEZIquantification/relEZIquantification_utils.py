@@ -344,7 +344,7 @@ def get2DProjectiveTransformationMartix_by_SuperRetina(query_image, refer_image)
         pass
 
     # find homographic matrix H_m 
-    H_m = 0
+    H_m = []
     good = goodMatch.copy()
     if len(goodMatch) >= 4:
         src_pts = [cv_kpts_query[m.queryIdx].pt for m in good]
