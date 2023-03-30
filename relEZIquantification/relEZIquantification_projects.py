@@ -940,7 +940,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         factor = ms_analysis._vol_file.header.size_x / scan_size[1]
                         if factor * stackwidth_fix <= 1 and  factor % 1 == 0:
                             fovea_ascan = fovea_ascan * factor
-                            stackwidth = (1/factor) * stackwidth_fix
+                            stackwidth = int((1/factor) * stackwidth_fix)
 
 
                         # delta between real fovea centre and current fovea bscan position 
