@@ -975,7 +975,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
                         # Matrix H
                         H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0)
-                        if not H:
+                        if H == 0:
                             print("%d: Registration failed" % (ids))
                             continue
 
