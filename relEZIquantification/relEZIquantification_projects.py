@@ -937,6 +937,12 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
 
                         fovea_bscan, fovea_ascan = map._fovea_coordinates
+                        factor = ms_analysis._vol_file.header.size_x / scan_size[1]
+                        if factor * stackwidth_fix <= 1 and  factor % 1 == 0:
+                            fovea_ascan = fovea_ascan * factor
+                            stackwidth = (1/factor) * stackwidth_fix
+
+
                         # delta between real fovea centre and current fovea bscan position 
                         d_bscan  = c_bscan - fovea_bscan
 
@@ -1033,8 +1039,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     if ms_analysis._vol_file.header.size_x != scan_size[1]:
                         print("ID: %s has different number of ascans (%i) than expected (%i)" % (sid, ms_analysis._vol_file.header.size_x, scan_size[1]))
                         factor = ms_analysis._vol_file.header.size_x / scan_size[1]
-                        if factor * stackwidth_fix >= 1 and  factor % 1 == 0:
-                            stackwidth = int(factor * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
+                        if factor * stackwidth_fix <= 1 and  factor % 1 == 0:
+                            stackwidth = int((1/factor) * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
             
             
                     for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
