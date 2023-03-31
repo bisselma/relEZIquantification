@@ -1253,8 +1253,10 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     worksheet.write_column(row, header_length -1, elm_map)
 
                     # additional entries
-                    for idx, ex_type in enumerate(map.excluded_maps.values()):
-                         worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
+
+                    if map.excluded_maps is not None:
+                        for idx, ex_type in enumerate(map.excluded_maps.values()):
+                            worksheet.write_column(row, 6 + idx, ex_type.flatten()) # exclusion type is added to the sheet
 
                     if "etdrs" in self.parameter:
                         worksheet.write_column(row, header_length -3, self.get_edtrs_grid_map(map._scan_area).flatten())
