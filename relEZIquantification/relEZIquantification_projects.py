@@ -10,6 +10,7 @@ import xlsxwriter as xls
 from scipy.ndimage.morphology import binary_dilation
 from  skimage.morphology import disk
 from PIL import Image
+import pandas as pd
 
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
@@ -1648,7 +1649,317 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         workbook.close()
 
 class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
-    pass 
+
+    def __init__(
+        self, 
+        _project_name: Optional[str] = None,
+        _data_folder: Optional[Path] = None, 
+        _fovea_coords: Optional[Dict] = None, 
+        _scan_size: Optional[tuple] = None, 
+        _scan_field: Optional[tuple] = None, 
+        _stackwidth: Optional[int] = None, 
+        _ssd_maps: Optional[SSDmap] = None, 
+        _mean_rpedc_map: Optional[Mean_rpedc_map] = None, 
+        _parameter: Optional[List] = None,
+        _patients: Optional[Dict] = {}
+        ):
+        super().__init__(_project_name, _data_folder,  _fovea_coords, _scan_size, _scan_field, _stackwidth, _ssd_maps, _mean_rpedc_map, _parameter, _patients)
+
+
+    def get_microperimetry_grid_field(self, micro_data_path, micro_ir_path, visit, radius, use_gpu):
+
+        if len(self.patients) == 0:
+            raise Exception("So far, no patient has been analyzed, please first use calculate_relEZI_maps()")
+
+        ir_list_m, ir_list_s = get_microperimetry_IR_image_list(micro_ir_path)
+
+        df = pd.read_excel(micro_data_path)
+
+        key_list_num = np.copy(len(self.patients.keys()))
+
+        for i in range(key_list_num):
+
+            keys = list(self.patients.keys())[i]
+            # read vol by macustarpredicter
+            analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+            vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
+            cache_segmentation=True,
+            use_gpu = use_gpu
+            )
+
+
+            vol = analysis_obj.vol_file
+
+            # get slo image 
+            slo_img = vol.slo_image
+
+
+            # laterality 
+            lat = self.patients[keys].visits[visit -2].laterality
+
+            stimuli_s = ut.get_microperimetry(
+                df,
+                self.patients[keys].pid,
+                visit,
+                lat,
+                "S")
+
+            stimuli_m = ut.get_microperimetry(
+                df,
+                self.patients[keys].pid,
+                visit,
+                lat,
+                "M")
+
+           # create grid coords
+            px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
+            ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
+            ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+
+            x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
+            y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
+
+            # get slo_coordinates
+            grid = np.array(vol.grid)
+        
+            # expected coordinates of scan field
+            p = np.array([
+                [0, 768],
+                [64, 64]
+                ])
+
+            # actual coordinates of scan field
+            if lat == "OD":
+                q = np.array([
+                    [grid[-1,0], grid[-1,2]],
+                    [grid[-1,1], grid[-1,3]]
+                    ])
+            else:
+                # flip slo_img
+                slo_img = np.flip(slo_img,1) 
+                
+                # Coordinates are mirrored on the x-axis
+                q = np.array([
+                    [768 - grid[-1,2],768 - grid[-1,0]],
+                    [grid[-1,3], grid[-1,1]]
+                    ])                
+
+
+            # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
+            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+
+            # coordinates of fovea center expected and patient
+            vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
+            vol_p_pat = np.array(self.patients[keys].visits[visit-2].fovea_coords).T
+        
+            # translation in oct scan filed coordinate system
+            vol_t_F = (vol_p_fovea - vol_p_pat)
+            vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int) # bscan number in pixel [(640/241) => pixel/bscan]
+
+            # Matrix including complete transformation
+            vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
+
+            # transform slo_img
+            slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
+
+            mask_iamd_m, stimuli_m_map = ut.get_microperimetry_maps(
+                    ir_list_m[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_m,
+                    x,y)
+
+            mask_iamd_s, stimuli_s_map = ut.get_microperimetry_maps(
+                    ir_list_s[self.patients[keys].pid],
+                    lat,
+                    radius,
+                    slo_img,  
+                    self.scan_size,
+                    self.stackwidth,
+                    stimuli_s,
+                    x,y)
+
+    
+            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
+            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
+            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
+            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = stimuli_s_map
+
+
+    def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
+        if len(self.patients) == 0:
+            raise Exception("So far, no patients have been analyzed, please first use calculate_relEZI_maps()")
+
+        ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
+
+        df = pd.read_excel(micro_data_path)
+
+        key_list_num = np.copy(len(self.patients.keys()))
+
+        for i in range(key_list_num):
+
+            keys = list(self.patients.keys())[i]
+
+            # read vol by macustarpredicter
+            analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+            vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
+            cache_segmentation=True,
+            use_gpu = use_gpu
+            )
+
+
+            # calculate rel_ez_i_map
+            ez_i_map = cv2.resize(self.patients[keys].visits[visit -2].octmap["ez"], (768, int(768*(25/30))))
+            elm_i_map = cv2.resize(self.patients[keys].visits[visit -2].octmap["elm"], (768, int(768*(25/30))))
+            ez_i_map[np.isnan(ez_i_map)] = 0
+            elm_i_map[np.isnan(elm_i_map)] = 0
+
+            rel_ez_i_map = np.full((ez_i_map.shape[0], ez_i_map.shape[1]), np.NaN)
+            not_zeror = np.logical_and(ez_i_map != 0, elm_i_map != 0)
+            rel_ez_i_map[not_zeror] = ez_i_map[not_zeror] / elm_i_map[not_zeror]    
+
+
+            vol = analysis_obj.vol_file
+
+            # get slo image 
+            slo_img = vol.slo_image
+            h_slo, w_slo = slo_img.shape
+
+
+            # laterality 
+            lat = self.patients[keys].visits[visit -2].laterality
+
+
+
+            stimuli_s = ut.get_microperimetry(
+                df,
+                self.patients[keys].pid,
+                visit,
+                lat,
+                "S")
+
+            stimuli_m = ut.get_microperimetry(
+                df,
+                self.patients[keys].pid,
+                visit,
+                lat,
+                "M")
+
+        
+
+            # create grid coords
+            px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
+            ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
+            ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+
+            x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
+            y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
+
+            # get slo_coordinates
+            grid = np.array(vol.grid)
+        
+            # expected coordinates of scan field
+            p = np.array([
+                [0, 768],
+                [64, 64]
+                ])
+
+            # actual coordinates of scan field
+            if lat == "OD":
+                q = np.array([
+                    [grid[-1,0], grid[-1,2]],
+                    [grid[-1,1], grid[-1,3]]
+                    ])
+            else:
+                # flip slo_img
+                slo_img = np.flip(slo_img,1) 
+                
+                # Coordinates are mirrored on the x-axis
+                q = np.array([
+                    [768 - grid[-1,2],768 - grid[-1,0]],
+                    [grid[-1,3], grid[-1,1]]
+                    ])                
+
+
+            # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
+            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+
+            # coordinates of fovea center expected and patient
+            vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
+            vol_p_pat = np.array(self.patients[keys].visits[visit-2].fovea_coords).T
+        
+            # translation in oct scan filed coordinate system
+            vol_t_F = (vol_p_fovea - vol_p_pat)
+            vol_t_F[1] = (vol_t_F[1] * (640/241)).astype(int) # bscan number in pixel [(640/241) => pixel/bscan]
+
+            # Matrix including complete transformation
+            vol_R_t_F = vol_R + np.append(np.zeros((2,2)), vol_t_F[:,None], axis=1)
+
+            # transform slo_img
+            slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
+
+            # get microperimetry IR image m and s
+            img1_raw_m = cv2.imread(ir_list_m[self.patients[keys].pid],0)
+            img1_raw_s = cv2.imread(ir_list_s[self.patients[keys].pid],0)
+            (h_micro, w_micro) = img1_raw_m.shape[:2]
+
+            # rotated IR image 
+            (cX, cY) = (w_micro // 2, h_micro // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), 90, 1.0)
+            img1_raw_m = cv2.warpAffine(img1_raw_m, M, (w_micro, h_micro))
+            img1_raw_s = cv2.warpAffine(img1_raw_s, M, (w_micro, h_micro))
+
+            # flip microperimetry-IR image
+            if lat == "OS":
+                img1_raw_m = np.flip(img1_raw_m, 1)
+                img1_raw_s = np.flip(img1_raw_s, 1)
+
+            # crop image to 30° x 30° around centered fovea 3.25° offset on each side
+            offset = int((h_micro/36) * 3)
+            img1_m = img1_raw_m[offset:-offset,offset:-offset]
+            img1_m = cv2.resize(img1_m,(h_slo,w_slo))
+            img1_s = img1_raw_s[offset:-offset,offset:-offset]
+            img1_s = cv2.resize(img1_s,(h_slo,w_slo))
+
+
+            # calculate affine transformation matrix A
+            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
+            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
+        
+
+            ut.show_grid_over_relEZIMap(
+                img1_m,
+                rel_ez_i_map,
+                x,
+                y,
+                (slo_img.shape[0]//2,slo_img.shape[1]//2),
+                stimuli_m,
+                H_m,
+                8,
+                slo_img.shape[0] / 30, # pixel per degree
+                True,
+                self.patients[keys].pid + "_M",
+                True,
+                target_path
+                )
+
+            ut.show_grid_over_relEZIMap(
+                img1_s,
+                rel_ez_i_map,
+                x,
+                y,
+                (slo_img.shape[0]//2,slo_img.shape[1]//2),
+                stimuli_s,
+                H_s,
+                8,
+                slo_img.shape[0] / 30, # pixel per degree
+                True,
+                self.patients[keys].pid + "_S",
+                True,
+                target_path
 
 if __name__ == "__main__":
     pass
