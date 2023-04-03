@@ -1687,7 +1687,6 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             use_gpu = use_gpu
             )
 
-
             vol = analysis_obj.vol_file
 
             # get slo image 
@@ -1697,14 +1696,14 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             # laterality 
             lat = self.patients[keys].visits[visit -2].laterality
 
-            stimuli_s = ut.get_microperimetry(
+            stimuli_s = get_microperimetry(
                 df,
                 self.patients[keys].pid,
                 visit,
                 lat,
                 "S")
 
-            stimuli_m = ut.get_microperimetry(
+            stimuli_m = get_microperimetry(
                 df,
                 self.patients[keys].pid,
                 visit,
@@ -1713,8 +1712,8 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
            # create grid coords
             px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
-            ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
-            ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+            ecc = np.array([items[0] for items in grid_iamd.values()]) * px_deg_y
+            ang = np.array([items[1] for items in grid_iamd.values()]) * np.pi / 180
 
             x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
             y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
@@ -1746,7 +1745,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            vol_R = get2DRigidTransformationMatrix(q, p)
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
@@ -1762,7 +1761,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             # transform slo_img
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
-            mask_iamd_m, stimuli_m_map = ut.get_microperimetry_maps(
+            mask_iamd_m, stimuli_m_map = get_microperimetry_maps(
                     ir_list_m[self.patients[keys].pid],
                     lat,
                     radius,
@@ -1772,7 +1771,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                     stimuli_m,
                     x,y)
 
-            mask_iamd_s, stimuli_s_map = ut.get_microperimetry_maps(
+            mask_iamd_s, stimuli_s_map = get_microperimetry_maps(
                     ir_list_s[self.patients[keys].pid],
                     lat,
                     radius,
@@ -1782,18 +1781,31 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                     stimuli_s,
                     x,y)
 
-    
-            self.patients[keys].visits[visit -2].octmap["micro_mask_m"] = mask_iamd_m
-            self.patients[keys].visits[visit -2].octmap["micro_mask_s"] = mask_iamd_s
-            self.patients[keys].visits[visit -2].octmap["micro_stim_m"] = stimuli_m_map
-            self.patients[keys].visits[visit -2].octmap["micro_stim_s"] = stimuli_s_map
+            if lat == "OD":
+                self.update_header(-2, "micro_mask_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_mask_m"] = mask_iamd_m
+                self.update_header(-2, "micro_mask_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_mask_s"] = mask_iamd_s
+                self.update_header(-2, "micro_stim_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_m"] = stimuli_m_map
+                self.update_header(-2, "micro_stim_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_s"] = stimuli_s_map
+            else:
+                self.update_header(-2, "micro_mask_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_m"] = mask_iamd_m
+                self.update_header(-2, "micro_mask_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_s"] = mask_iamd_s
+                self.update_header(-2, "micro_stim_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_m"] = stimuli_m_map
+                self.update_header(-2, "micro_stim_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_s"] = stimuli_s_map
 
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
             raise Exception("So far, no patients have been analyzed, please first use calculate_relEZI_maps()")
 
-        ir_list_m, ir_list_s = ut.get_microperimetry_IR_image_list(micro_ir_path)
+        ir_list_m, ir_list_s = get_microperimetry_IR_image_list(micro_ir_path)
 
         df = pd.read_excel(micro_data_path)
 
@@ -1834,14 +1846,14 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 
 
-            stimuli_s = ut.get_microperimetry(
+            stimuli_s = get_microperimetry(
                 df,
                 self.patients[keys].pid,
                 visit,
                 lat,
                 "S")
 
-            stimuli_m = ut.get_microperimetry(
+            stimuli_m = get_microperimetry(
                 df,
                 self.patients[keys].pid,
                 visit,
@@ -1852,8 +1864,8 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
             # create grid coords
             px_deg_y = px_deg_x = slo_img.shape[0] / 30 # pixel per degree
-            ecc = np.array([items[0] for items in ut.grid_iamd.values()]) * px_deg_y
-            ang = np.array([items[1] for items in ut.grid_iamd.values()]) * np.pi / 180
+            ecc = np.array([items[0] for items in grid_iamd.values()]) * px_deg_y
+            ang = np.array([items[1] for items in grid_iamd.values()]) * np.pi / 180
 
             x = (np.sin(ang) * ecc) + slo_img.shape[0]/2
             y = (np.cos(ang) * ecc) + slo_img.shape[1]/2
@@ -1885,7 +1897,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 
             # calculate rigid transfromation matrix R in oct scan filed coordinate system "vol"
-            vol_R = ut.get2DRigidTransformationMatrix(q, p)
+            vol_R = get2DRigidTransformationMatrix(q, p)
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
@@ -1926,11 +1938,11 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 
             # calculate affine transformation matrix A
-            H_m = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
-            H_s = ut.get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
+            H_m = uget2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
+            H_s = get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
         
 
-            ut.show_grid_over_relEZIMap(
+            show_grid_over_relEZIMap(
                 img1_m,
                 rel_ez_i_map,
                 x,
@@ -1944,9 +1956,9 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].pid + "_M",
                 True,
                 target_path
-                )
+            )
 
-            ut.show_grid_over_relEZIMap(
+            show_grid_over_relEZIMap(
                 img1_s,
                 rel_ez_i_map,
                 x,
@@ -1960,6 +1972,6 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].pid + "_S",
                 True,
                 target_path
-
+            )
 if __name__ == "__main__":
     pass
