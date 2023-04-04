@@ -1360,7 +1360,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
         data_list = self.get_list()
 
         # get lists of exclusion data 
-        for exclusion_type in area_exclusion.keys():
+        for exclusion_type in area_exclusion:
             if exclusion_type == "rpedc":
                 ae_dict_1 = get_rpedc_list(self.data_folder)
                 self.update_header(-2, "druse(y/n)") 
@@ -1420,10 +1420,10 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
 
 
             # get rpedc map if rpedc exclusion is considered
-            if "rpedc" in area_exclusion.keys():
+            if "rpedc" in area_exclusion:
                 if vol_id in ae_dict_1.keys():
                     rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
-                    if "atrophy" in area_exclusion.keys():
+                    if "atrophy" in area_exclusion:
                         exclusion_dict["atrophy"] = rpedc_map == 1
                     exclusion_dict["rpedc"] = rpedc_map == 2
                 else:
@@ -1431,7 +1431,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                     continue
             
             # get rpd map if rpd exclusion is considered
-            if "rpd" in area_exclusion.keys():
+            if "rpd" in area_exclusion:
                 if vol_id in ae_dict_2.keys():
                     exclusion_dict["rpd"] = self.get_rpd_map(ae_dict_2[vol_id], self.scan_size, lat, (d_bscan, d_ascan))
                 else:
@@ -1938,7 +1938,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
 
             # calculate affine transformation matrix A
-            H_m = uget2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
+            H_m = get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_m)
             H_s = get2DProjectiveTransformationMartix_by_SuperRetina(slo_img, img1_s)
         
 
