@@ -1364,7 +1364,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             if exclusion_type == "rpedc":
                 ae_dict_1 = get_rpedc_list(self.data_folder)
                 self.update_header(-2, "druse(y/n)") 
-                if "atrophy" in area_exclusion.keys():
+                if "atrophy" in area_exclusion:
                     self.update_header(-2, "atrophy(y/n)")
                 if len(ae_dict_1.keys()) == 0:
                     raise ValueError("If rpedc maps should be considered the data must be in the same folder as the other data")
