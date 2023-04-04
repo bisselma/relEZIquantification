@@ -1483,7 +1483,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                 
                 
                 # get rois
-                raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, self.scan_size, seg_mask)
+                raw_roi, seg_mask_roi = get_roi_masks(bscan, self.ref_layer, ms_analysis._vol_file.header.size_x, seg_mask)
                 
                 # iterate over bscans
                 for i in range(n_st):  
