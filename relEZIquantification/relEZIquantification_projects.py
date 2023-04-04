@@ -276,6 +276,7 @@ class RelEZIQuantificationBase:
         return edtrs_grid_map
         
     def get_rpedc_map(
+        self,
         file_path: Union[str, Path, IO] = None,
         scan_size: Optional[tuple] = None,
         mean_rpedc: Optional[Mean_rpedc_map] = None,
@@ -1422,7 +1423,7 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             # get rpedc map if rpedc exclusion is considered
             if "rpedc" in area_exclusion:
                 if vol_id in ae_dict_1.keys():
-                    rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat) # , (d_bscan, d_ascan)
+                    rpedc_map = self.get_rpedc_map(ae_dict_1[vol_id], self.scan_size, self.mean_rpedc_map, lat, (d_bscan, d_ascan))
                     if "atrophy" in area_exclusion:
                         exclusion_dict["atrophy"] = rpedc_map == 1
                     exclusion_dict["rpedc"] = rpedc_map == 2
