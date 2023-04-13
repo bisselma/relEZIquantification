@@ -11,6 +11,7 @@ from scipy.ndimage.morphology import binary_dilation
 from  skimage.morphology import disk
 from PIL import Image
 import pandas as pd
+from skimage.measure import label
 
 from heyex_tools import vol_reader
 from grade_ml_segmentation import macustar_segmentation_analysis
@@ -202,8 +203,14 @@ class RelEZIQuantificationBase:
 
         ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_LINEAR) > 0 
 
+        
+
+
         if laterality == "OS":
             ezloss_map = np.flip(ezloss_map, 1)
+
+        # label map
+        ezloss_map = label(ezloss_map)
 
         return ezloss_map
 
@@ -405,7 +412,7 @@ class RelEZIQuantificationBase:
         binary_number = 0
 
         for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
-            if any(exclusion_dict[exclusion_type][idx_w, start_r + i * self.stackwidth: start_r + (i + 1) * self.stackwidth] == 1):
+            if any(exclusion_dict[exclusion_type][idx_w, start_r + i * self.stackwidth: start_r + (i + 1) * self.stackwidth] >= 1):
                     binary_number += 2**idx
 
         return binary_number
@@ -984,7 +991,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         # Matrix H
                         H = get2DProjectiveTransformationMartix_by_SuperRetina(slon, slo0)
                         if len(H) == 0:
-                            print("%d: Registration failed" % (ids))
+                            print("%d: Registration failed" % (map.series_uid))
                             continue
 
                         # setup transformation
