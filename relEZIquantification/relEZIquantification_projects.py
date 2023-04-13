@@ -202,12 +202,12 @@ class RelEZIQuantificationBase:
             cv2.drawContours(filled, [cont], 0, 255, -1)      
 
         if laterality == "OS":
-            ezloss_map = np.flip(ezloss_map, 1)
+            ezloss_map = np.flip(filled, 1)
 
         # label map
         ezloss_map = label(ezloss_map)
 
-        ezloss_map = cv2.resize(filled, self.scan_size[::-1], cv2.INTER_NEAREST)
+        ezloss_map = cv2.resize(ezloss_map, self.scan_size[::-1], cv2.INTER_NEAREST)
 
         return ezloss_map
 
