@@ -192,17 +192,17 @@ class RelEZIQuantificationBase:
         mask = (binary_dilation(mask, structure = struct) * 255).astype(np.uint8)
 
         # get bounding box coordinates from the one filled external contour
-        filled = np.zeros_like(mask)
+        ezloss_map = np.zeros_like(mask)
         contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contours = contours[0]
         for cont in contours:
             x,y,w,h = cv2.boundingRect(cont)
             if h <= 10 or w <=10:
                 continue
-            cv2.drawContours(filled, [cont], 0, 255, -1)      
+            cv2.drawContours(ezloss_map, [cont], 0, 255, -1)      
 
         if laterality == "OS":
-            ezloss_map = np.flip(filled, 1)
+            ezloss_map = np.flip(ezloss_map, 1)
 
         # label map
         ezloss_map = label(ezloss_map)
