@@ -1050,7 +1050,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                             stackwidth = int((1/factor) * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
             
             
-                    for bscan, seg_mask, ez, elm, excl, ezloss_excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
+                    for bscan, seg_mask, ez, elm, ezloss_excl, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                         raw_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
                         seg_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                         curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
