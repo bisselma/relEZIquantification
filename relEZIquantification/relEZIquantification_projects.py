@@ -1033,7 +1033,8 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     # get ezloss map if ez_loss exclusion is considered
                     if "ezloss" in area_exclusion:
                         if sid in ae_dict_1.keys():
-                            exclusion_dict["ezloss"] = self.get_ezloss_map(ae_dict_1[sid], lat) 
+                            ezloss_map = self.get_ezloss_map(ae_dict_1[sid], lat) 
+                            exc_ezloss_map = np.zeros_like(curr_excluded)
 
             
                     # check if given number of b scans match with pre-defined number 
@@ -1049,11 +1050,12 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                             stackwidth = int((1/factor) * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
             
             
-                    for bscan, seg_mask, ez, elm, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
+                    for bscan, seg_mask, ez, elm, excl, ezloss_excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
                         raw_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read raw data
                         seg_voxel[max([-d_bscan, 0]): scan_size[0] + min([-d_bscan, 0])], # read seg mask
                         curr_ez_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         curr_elm_intensity[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
+                        exc_ezloss_map[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         curr_excluded[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         self.ssd_maps.ez_ssd_map.distance_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
                         self.ssd_maps.ez_ssd_map.std_array[max([d_bscan, 0]): scan_size[0] + min([d_bscan, 0]), :], # write
@@ -1084,6 +1086,10 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                                 # condition seg_mask_area 10 and 11 thickness over stackwidth not higher 15
 
                             else:
+                                if "ezloss" in area_exclusion:
+                                    if any(ezloss_map[idx_w, start_r + i * self.stackwidth: start_r + (i + 1) * self.stackwidth] >= 1):
+                                        ezloss_excl[start_w + i] = np.nanmax(ezloss_map[idx_w, start_r + i * self.stackwidth: start_r + (i + 1) * self.stackwidth]) 
+
                                 excl[start_w + i] = self.get_exclusion_value(idx_w, start_r, i)
 
   
@@ -1125,6 +1131,9 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                     for idx, exclusion_type in zip(range(len(exclusion_dict)-1,-1,-1), exclusion_dict):
                         tmp_excluded_dict[exclusion_type] = curr_excluded // 2**idx
                         curr_excluded = curr_excluded % 2**idx
+
+                    if "ezloss" in area_exclusion:
+                        tmp_excluded_dict["ezloss"] = exc_ezloss_map
 
 
                     # add data to map object
