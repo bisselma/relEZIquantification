@@ -697,7 +697,7 @@ class Patient:
                     print("Visit already exists")
                 break
             
-            if visit.date_of_recording > visitdate:
+            if visit.date_of_recording < visitdate:
                 if  i < len(self.visits) -1: 
                     continue
                 else:
@@ -708,7 +708,7 @@ class Patient:
                         self.visits.append(Visit(vid, visitdate, None, map))
                         break
 
-            if visit.date_of_recording < visitdate:
+            if visit.date_of_recording > visitdate:
                 if map.laterality == "OD":
                     self.visits.insert(i, Visit(vid, visitdate, map, None))
                 else: # "OS"
