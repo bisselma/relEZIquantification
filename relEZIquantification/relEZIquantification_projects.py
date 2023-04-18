@@ -932,7 +932,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         cache_segmentation=True
                         )
 
-                    if vi == 0 or vi > 0 and not slo0:
+                    if vi == 0 or vi > 0 and slo0 == None:
                         # only if patient has more than one visit
                         if len(self.patients[ids].visits) > 1:
                             slo0 = ms_analysis.vol_file.slo_image # first SLO image
