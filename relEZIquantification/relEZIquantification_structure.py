@@ -692,12 +692,12 @@ class Patient:
 
         for i, visit in enumerate(self.visits):
             
-            if visit.date_of_recording == visitdate: # same visit
+            if visit.date_of_recording.date() == visitdate.date(): # same visit
                 if visit.add(map):
                     print("Visit already exists")
                 break
             
-            if visit.date_of_recording < visitdate:
+            if visit.date_of_recording.date() < visitdate.date():
                 if  i < len(self.visits) -1: 
                     continue
                 else:
@@ -708,7 +708,7 @@ class Patient:
                         self.visits.append(Visit(vid, visitdate, None, map))
                         break
 
-            if visit.date_of_recording > visitdate:
+            if visit.date_of_recording.date() > visitdate.date():
                 if map.laterality == "OD":
                     self.visits.insert(i, Visit(vid, visitdate, map, None))
                 else: # "OS"
