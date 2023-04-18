@@ -908,6 +908,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
+                slo0 = None
                 for vi, visit in enumerate(self.patients[ids].visits): 
                     if j == 0:
                         if visit.relEZI_map_OD:
@@ -931,7 +932,7 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         cache_segmentation=True
                         )
 
-                    if vi == 0:
+                    if vi == 0 or vi > 0 and not slo0:
                         # only if patient has more than one visit
                         if len(self.patients[ids].visits) > 1:
                             slo0 = ms_analysis.vol_file.slo_image # first SLO image
