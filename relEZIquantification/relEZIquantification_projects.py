@@ -1049,6 +1049,9 @@ class RelEZIQuantificationMactel2(RelEZIQuantificationMactel):
                         factor = ms_analysis._vol_file.header.size_x / scan_size[1]
                         if factor * stackwidth_fix <= 1 and  factor % 1 == 0:
                             stackwidth = int((1/factor) * stackwidth_fix) # change stackwidth temporarily to adjust to different scan sizes
+
+                    
+                    print(sid)
             
             
                     for bscan, seg_mask, ez, elm, ezloss_excl, excl, ez_ssd_mean, ez_ssd_std, elm_ssd_mean, elm_ssd_std, idx_r, idx_w in zip(
