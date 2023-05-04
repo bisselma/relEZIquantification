@@ -1698,21 +1698,23 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
         for i in range(key_list_num):
 
             keys = list(self.patients.keys())[i]
-            # read vol by macustarpredicter
-            analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
-            vol_file_path=self.patients[keys].visits[visit -2].volfile_path,
-            cache_segmentation=True,
-            use_gpu = use_gpu
-            )
+            for rezimap in self.patients[keys].visits[visit -2].get_maps():
+            
+                # read vol by macustarpredicter
+                analysis_obj = macustar_segmentation_analysis.MacustarSegmentationAnalysis(
+                    vol_file_path = rezimap._volfile_path,
+                    cache_segmentation = True,
+                    use_gpu = use_gpu
+                    )
 
-            vol = analysis_obj.vol_file
+                vol = analysis_obj.vol_file
 
-            # get slo image 
-            slo_img = vol.slo_image
+                # get slo image 
+                slo_img = vol.slo_image
 
 
-            # laterality 
-            lat = self.patients[keys].visits[visit -2].laterality
+                # laterality 
+                lat = rezimap.laterality
 
             stimuli_s = get_microperimetry(
                 df,
@@ -1767,7 +1769,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
             # coordinates of fovea center expected and patient
             vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
-            vol_p_pat = np.array(self.patients[keys].visits[visit-2].fovea_coords).T
+            vol_p_pat = np.array(rezimap.fovea_coordinates).T
         
             # translation in oct scan filed coordinate system
             vol_t_F = (vol_p_fovea - vol_p_pat)
@@ -1785,7 +1787,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                     lat,
                     radius,
                     slo_img, 
-
+                    rezimap,
                     self.scan_size,
                     self.stackwidth,
                     stimuli_m,
@@ -1796,6 +1798,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                     lat,
                     radius,
                     slo_img,  
+                    rezimap,
                     self.scan_size,
                     self.stackwidth,
                     stimuli_s,
