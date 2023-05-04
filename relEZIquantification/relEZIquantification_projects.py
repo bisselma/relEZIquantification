@@ -1779,17 +1779,19 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             # transform slo_img
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
 
-            mask_iamd_m, stimuli_m_map = get_microperimetry_maps(
+            
+            mask_iamd_m, stimuli_m_map, mean_rezi_m_map = get_microperimetry_maps(
                     ir_list_m[self.patients[keys].pid],
                     lat,
                     radius,
-                    slo_img,  
+                    slo_img, 
+
                     self.scan_size,
                     self.stackwidth,
                     stimuli_m,
                     x,y)
 
-            mask_iamd_s, stimuli_s_map = get_microperimetry_maps(
+            mask_iamd_s, stimuli_s_map, mean_rezi_s_map = get_microperimetry_maps(
                     ir_list_s[self.patients[keys].pid],
                     lat,
                     radius,
@@ -1808,6 +1810,10 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_m"] = stimuli_m_map
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_s"] = stimuli_s_map
+                self.update_header(-2, "mean_rezi_m_map")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_m_map"] = mean_rezi_m_map
+                self.update_header(-2, "mean_rezi_s_map")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_s_map"] = mean_rezi_s_map
             else:
                 self.update_header(-2, "micro_mask_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_m"] = mask_iamd_m
@@ -1817,7 +1823,10 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_m"] = stimuli_m_map
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_s"] = stimuli_s_map
-
+                self.update_header(-2, "mean_rezi_m_map")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_m_map"] = mean_rezi_m_map
+                self.update_header(-2, "mean_rezi_s_map")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_s_map"] = mean_rezi_s_map
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
