@@ -1813,10 +1813,11 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_m"] = stimuli_m_map
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_s"] = stimuli_s_map
-                self.update_header(-2, "mean_rezi_m_map")
-                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_m_map"] = mean_rezi_m_map
-                self.update_header(-2, "mean_rezi_s_map")
-                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_s_map"] = mean_rezi_s_map
+                for stim_idx in range(33):
+                    self.update_header(-2, "mean_rezi_m_map_pos_" + str(stim_idx))
+                    self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_m_map_pos_" + str(stim_idx)] = mean_rezi_m_map[stim_idx,:,:]
+                    self.update_header(-2, "mean_rezi_s_map_pos_" + str(stim_idx))
+                    self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_s_map_pos_" + str(stim_idx)] = mean_rezi_s_map[stim_idx,:,:]
             else:
                 self.update_header(-2, "micro_mask_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_m"] = mask_iamd_m
@@ -1826,10 +1827,11 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_m"] = stimuli_m_map
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_s"] = stimuli_s_map
-                self.update_header(-2, "mean_rezi_m_map")
-                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_m_map"] = mean_rezi_m_map
-                self.update_header(-2, "mean_rezi_s_map")
-                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_s_map"] = mean_rezi_s_map
+                for stim_idx in range(33):
+                    self.update_header(-2, "mean_rezi_m_map_pos_" + str(stim_idx))
+                    self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_m_map_pos_" + str(stim_idx)] = mean_rezi_m_map[stim_idx,:,:]
+                    self.update_header(-2, "mean_rezi_s_map_pos_" + str(stim_idx))
+                    self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_s_map_pos_" + str(stim_idx)] = mean_rezi_s_map[stim_idx,:,:]
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
