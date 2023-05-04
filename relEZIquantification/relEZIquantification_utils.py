@@ -478,7 +478,7 @@ def get_microperimetry(
 
     return micro 
 
-def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth, stimuli, x, y):
+def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size, stackwidth, stimuli, x, y):
 
             # create binary image with iamd grid 
             if stimuli is None:
@@ -486,6 +486,8 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth
             else:
                 mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
                 stimuli_map = np.full_like(mask_iamd, np.nan)
+                mean_rezi_map = np.full_like(mask_iamd, np.nan)
+
 
             # get microperimetry IR image m and s
             img1_raw = cv2.imread(ir_path,0)
@@ -532,9 +534,10 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, scan_size, stackwidth
             for idx in range(33):            
                 mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx + 1
                 stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
+                mean_rezi_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = np.nanmean(relezimap[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2])
 
 
-            return mask_iamd, stimuli_map
+            return mask_iamd, stimuli_map, mean_rezi_map
 
 def sample_circle(x,y, radius, field, no_dc_ratio):
     yy,xx = np.mgrid[:field.shape[0], :field.shape[1]]
