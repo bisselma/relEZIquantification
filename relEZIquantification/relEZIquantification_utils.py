@@ -486,7 +486,7 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
             else:
                 mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
                 stimuli_map = np.full_like(mask_iamd, np.nan)
-                mean_rezi_maps = np.full((33,mask_iamd.shape), np.nan)
+                mean_rezi_maps = np.full((33,scan_size[0], scan_size[1] // stackwidth), np.nan)
 
 
             # get microperimetry IR image m and s
