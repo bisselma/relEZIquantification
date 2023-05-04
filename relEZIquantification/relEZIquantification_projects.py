@@ -1768,7 +1768,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             vol_R = get2DRigidTransformationMatrix(q, p)
 
             # coordinates of fovea center expected and patient
-            vol_p_fovea = np.array([self.scan_size[1]/2, (self.scan_size[0])//2]).T
+            vol_p_fovea = np.array([self.scan_size[0]/2, (self.scan_size[1])//2]).T
             vol_p_pat = np.array(rezimap.fovea_coordinates).T
         
             # translation in oct scan filed coordinate system
