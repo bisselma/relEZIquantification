@@ -531,10 +531,16 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
             xx = xx * (30/(768 // stackwidth))
             yy = yy * (25/241)
 
-            for idx in range(33):            
-                mask_iamd[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = idx + 1
-                stimuli_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = stimuli[idx]
-                mean_rezi_map[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2] = np.nanmean(relezimap[((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2])
+            # mask where ez and elm map not zero
+            not_zeror = np.logical_and(relezimap._ezi_map != 0, relezimap._elmi_map != 0)
+
+            for idx in range(33):      
+                stimuli_pos_mask = ((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2      
+                mask_iamd[stimuli_pos_mask] = idx + 1
+                stimuli_map[stimuli_pos_mask] = stimuli[idx]
+
+                not_zero_and_stimuli_pos_mask = np.logical_and(not_zeror, stimuli_pos_mask)
+                mean_rezi_map[stimuli_pos_mask] = np.nanmean(relezimap._ezi_map[not_zero_and_stimuli_pos_mask] / relezimap._elmi_map[not_zero_and_stimuli_pos_mask])
 
 
             return mask_iamd, stimuli_map, mean_rezi_map
