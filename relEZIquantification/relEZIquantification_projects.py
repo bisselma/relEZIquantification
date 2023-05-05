@@ -205,9 +205,8 @@ class RelEZIQuantificationBase:
             ezloss_map = np.flip(ezloss_map, 1)
 
         # label map
-        ezloss_map = label(ezloss_map)
-
         ezloss_map = cv2.resize(ezloss_map.astype(np.uint8), self.scan_size[::-1], cv2.INTER_NEAREST)
+        ezloss_map = label(ezloss_map)
 
         return ezloss_map
 
