@@ -1620,7 +1620,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
             
         row = 1
         header_length = len(self.header)
-        file_num = 1
 
         for i, ids in enumerate(self.patients.keys()):
             for j in range(2): # first all OD than all OS
@@ -1661,7 +1660,6 @@ class RelEZIQuantificationMacustar(RelEZIQuantificationBase):
                         worksheet = workbook.add_worksheet()            
                         worksheet.write_row(0, 0, self.header)   
                         row = 1
-                        file_num += 1
 
         workbook.close()
 
@@ -1779,9 +1777,8 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
 
             # transform slo_img
             slo_img = cv2.warpAffine(slo_img, vol_R_t_F, (768, 768))
-
-            
-            mask_iamd_m, stimuli_m_map, mean_rezi_m_map = get_microperimetry_maps(
+          
+            mask_iamd_m, stimuli_m_map, distance_map_m = get_microperimetry_maps(
                     ir_list_m[self.patients[keys].pid],
                     lat,
                     radius,
@@ -1792,7 +1789,7 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                     stimuli_m,
                     x,y)
 
-            mask_iamd_s, stimuli_s_map, mean_rezi_s_map = get_microperimetry_maps(
+            mask_iamd_s, stimuli_s_map, distance_map_s = get_microperimetry_maps(
                     ir_list_s[self.patients[keys].pid],
                     lat,
                     radius,
@@ -1806,31 +1803,31 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
             if lat == "OD":
                 self.update_header(-2, "micro_mask_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_mask_m"] = mask_iamd_m
-                self.update_header(-2, "micro_mask_s")
-                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_mask_s"] = mask_iamd_s
                 self.update_header(-2, "micro_stim_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_m"] = stimuli_m_map
+                self.update_header(-2, "micro_dist_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_dist_m"] = distance_map_m                
+                
+                self.update_header(-2, "micro_mask_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_mask_s"] = mask_iamd_s
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_stim_s"] = stimuli_s_map
-                for stim_idx in range(33):
-                    self.update_header(-2, "mean_rezi_m_map_pos_" + str(stim_idx))
-                    self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_m_map_pos_" + str(stim_idx)] = mean_rezi_m_map[stim_idx,:,:]
-                    self.update_header(-2, "mean_rezi_s_map_pos_" + str(stim_idx))
-                    self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["mean_rezi_s_map_pos_" + str(stim_idx)] = mean_rezi_s_map[stim_idx,:,:]
+                self.update_header(-2, "micro_dist_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OD._excluded_maps["micro_dist_s"] = distance_map_s
             else:
                 self.update_header(-2, "micro_mask_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_m"] = mask_iamd_m
-                self.update_header(-2, "micro_mask_s")
-                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_s"] = mask_iamd_s
                 self.update_header(-2, "micro_stim_m")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_m"] = stimuli_m_map
+                self.update_header(-2, "micro_dist_m")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_dist_m"] = distance_map_m  
+
+                self.update_header(-2, "micro_mask_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_mask_s"] = mask_iamd_s
                 self.update_header(-2, "micro_stim_s")
                 self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_stim_s"] = stimuli_s_map
-                for stim_idx in range(33):
-                    self.update_header(-2, "mean_rezi_m_map_pos_" + str(stim_idx))
-                    self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_m_map_pos_" + str(stim_idx)] = mean_rezi_m_map[stim_idx,:,:]
-                    self.update_header(-2, "mean_rezi_s_map_pos_" + str(stim_idx))
-                    self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["mean_rezi_s_map_pos_" + str(stim_idx)] = mean_rezi_s_map[stim_idx,:,:]
+                self.update_header(-2, "micro_dist_s")
+                self.patients[keys].visits[visit -2].relEZI_map_OS._excluded_maps["micro_dist_s"] = distance_map_s 
 
     def get_microperimetry_grid_field_show(self, micro_data_path, micro_ir_path, target_path, visit, use_gpu):
         if len(self.patients) == 0:
@@ -2004,5 +2001,118 @@ class RelEZIQuantificationMicro(RelEZIQuantificationMacustar):
                 True,
                 target_path
             )
-if __name__ == "__main__":
-    pass
+
+
+    def create_excel_sheets_micro_data(
+        self,
+        folder_path: Path,
+        n: int,
+        ) -> None:
+        """
+        Args:
+            folder_path (str): Target folder for data
+            n (int): Number of visits per sheet
+            project (str): project name like Macustar
+        """
+
+        header = ["ID", "eye", "visit date", "a-Scan [°]", "b-Scan [°]","ez", "elm"]      # excel sheets header for micro data       
+
+        nos = self.scan_size[1] // self.stackwidth      # Number of stacks
+        d_a_scan = self.scan_field[1] / nos     # Distance between stacks in degree
+        d_b_scan = self.scan_field[0] / self.scan_size[0]       # Distance between b-scans in degree
+        a_scan_mesh, b_scan_mesh = np.meshgrid(
+                    np.arange(-self.scan_field[1]/2, self.scan_field[1]/2,d_a_scan),
+                    np.arange(-self.scan_field[0]/2, self.scan_field[0]/2,d_b_scan))
+ 
+
+        if not os.path.isdir(folder_path):
+            os.path.mkdir(folder_path)
+        
+        workbook_m = xls.Workbook(os.path.join(folder_path, "micro_data_m" + "_0.xlsx"),  {'nan_inf_to_errors': True})
+        worksheet_m = workbook_m.add_worksheet()
+        workbook_s = xls.Workbook(os.path.join(folder_path, "micro_data_s" + "_0.xlsx"),  {'nan_inf_to_errors': True})
+        worksheet_s = workbook_s.add_worksheet()
+
+        row_m = 1
+        row_s = 1
+        pat_count = 1
+
+        for i, ids in enumerate(self.patients.keys()):
+            for j in range(2):      # First all OD than all OS
+                for vi, visit in enumerate(self.patients[ids].visits): 
+                    if j == 0:
+                        if visit.relEZI_map_OD:
+                            map = visit.relEZI_map_OD
+                        else:
+                            continue
+                    else:
+                        if visit.relEZI_map_OS:
+                            map = visit.relEZI_map_OS
+                        else:
+                            continue
+
+                    addit_maps_dict = {k: v for k, v in map.excluded_maps.items() if not k.startswith('micro')} # additional maps
+                    
+                    for micro_num_m, micro_thresh_m, micro_dist_m, micro_num_s, micro_thresh_s, micro_dist_s in zip(
+                                                                                                            map.excluded_maps["micro_mask_m"],
+                                                                                                            map.excluded_maps["micro_stim_m"],
+                                                                                                            map.excluded_maps["micro_dist_m"],
+                                                                                                            map.excluded_maps["micro_mask_s"],
+                                                                                                            map.excluded_maps["micro_stim_s"],
+                                                                                                            map.excluded_maps["micro_dist_s"]):
+                        tmp_mask_m = micro_num_m>0
+                        tmp_mask_s = micro_num_s>0
+                        
+                        worksheet_m.write(row_m, 0, "313" + "".join(n for n in ids.split("-")))       # ID
+                        worksheet_m.write(row_m, 1, map.laterality)       # Eye
+                        worksheet_m.write(row_m, 2, visit.date_of_recording.strftime("%Y-%m-%d"))     # Date
+                        worksheet_m.write_column(row_m, 3, a_scan_mesh[tmp_mask_m])        # A-scan
+                        worksheet_m.write_column(row_m, 4, b_scan_mesh[tmp_mask_m])        # B-scan
+                        worksheet_m.write_column(row_m, 5, map.ezi_map[tmp_mask_m])        # EZ
+                        worksheet_m.write_column(row_m, 6, map.elmi_map[tmp_mask_m])        # ELM
+
+                        worksheet_s.write(row_s, 0, "313" + "".join(n for n in ids.split("-")))       # ID
+                        worksheet_s.write(row_s, 1, map.laterality)       # Eye
+                        worksheet_s.write(row_s, 2, visit.date_of_recording.strftime("%Y-%m-%d"))     # Date
+                        worksheet_s.write_column(row_s, 3, a_scan_mesh[tmp_mask_s])        # A-scan
+                        worksheet_s.write_column(row_s, 4, b_scan_mesh[tmp_mask_s])        # B-scan
+                        worksheet_s.write_column(row_s, 5, map.ezi_map[tmp_mask_s])        # EZ
+                        worksheet_s.write_column(row_s, 6, map.elmi_map[tmp_mask_s])        # ELM
+
+                        for idx, key in enumerate(addit_maps_dict.keys()):
+                                if key == "rpedc":
+                                    header.insert(-1, "druse(y/n)")
+                                if key == "rpd":
+                                    header.insert(-1, "rpd(y/n)")
+                                if key == "atrophy":
+                                    header.insert(-1, "atrophy(y/n)")
+
+                                worksheet_m.write_column(row_m, 7 + idx, addit_maps_dict[key][tmp_mask_m])
+                                worksheet_s.write_column(row_s, 7 + idx, addit_maps_dict[key][tmp_mask_s])
+
+                        worksheet_m.write_column(row_m, -3, micro_num_m[tmp_mask_m])
+                        worksheet_m.write_column(row_m, -3, micro_thresh_m[tmp_mask_m])
+                        worksheet_m.write_column(row_m, -3, micro_dist_m[tmp_mask_m])
+
+                        worksheet_s.write_column(row_s, -3, micro_num_s[tmp_mask_s])
+                        worksheet_s.write_column(row_s, -3, micro_thresh_s[tmp_mask_s])
+                        worksheet_s.write_column(row_s, -3, micro_dist_s[tmp_mask_s])
+                        
+                        row_m += len(tmp_mask_m)
+                        row_s += len(tmp_mask_s)                                                                
+                        
+                    if pat_count == n:
+                        worksheet_m.write_row(0, 0, header.append(["micro_num_m", "micro_thresh_m", "micro_dist_m"]))
+                        worksheet_s.write_row(0, 0, header.append(["micro_num_s", "micro_thresh_s", "micro_dist_s"]))
+                        workbook_m.close()
+                        workbook_s.close()
+                        workbook = xls.Workbook(os.path.join(folder_path, self.project_name + "_" + str(int((i +1) / n)) + ".xlsx"), {'nan_inf_to_errors': True})
+                        worksheet = workbook.add_worksheet()            
+                        worksheet.write_row(0, 0, self.header)   
+                        row = 1
+                    
+                    pat_count += 1
+
+
+        workbook_m.close()
+        workbook_s.close()
