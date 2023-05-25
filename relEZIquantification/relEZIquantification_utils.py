@@ -482,13 +482,12 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
 
             # create binary image with iamd grid 
             if stimuli is None:
-                return np.full((scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)      
+                return np.full((33, scan_size[0], scan_size[1] // stackwidth), np.nan),  np.full((33, scan_size[0], scan_size[1] // stackwidth), np.nan)      
             else:
-                mask_iamd = np.full((scan_size[0], scan_size[1] // stackwidth), np.nan)
-                stimuli_map = np.full_like(mask_iamd, np.nan)
-                mean_rezi_maps = np.full((33,scan_size[0], scan_size[1] // stackwidth), np.nan)
-
-
+                mask_iamd_maps = np.full((33,scan_size[0], scan_size[1] // stackwidth), np.nan)
+                stimuli_maps = np.full_like(mask_iamd_maps, np.nan)
+                dist_maps = np.full_like(mask_iamd_maps, np.nan)
+ 
             # get microperimetry IR image m and s
             img1_raw = cv2.imread(ir_path,0)
             (h_micro, w_micro) = img1_raw.shape[:2]
@@ -507,12 +506,9 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
             img1 = img1_raw[offset:-offset,offset:-offset]
             img1 = cv2.resize(img1,slo_img.shape)
 
-
-
             # calculate affine transformation matrix A
             H = get2DProjectiveTransformationMartix_by_SuperRetina(img1, slo_img)
         
-
             # transform grid
             grid_coords = np.zeros((3,len(x)))
             grid_coords[0,:] = x
@@ -521,11 +517,9 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
 
             grid_coords_transf = H @ grid_coords
 
-
             x_new = (grid_coords_transf[0,:] * (30/ 768)) 
             y_new = ((grid_coords_transf[1,:] - 64) * (25 / 640))
 
-            
             yy,xx = np.mgrid[:241,:(768 // stackwidth)]
 
             xx = xx * (30/(768 // stackwidth))
@@ -534,16 +528,15 @@ def get_microperimetry_maps(ir_path, lat, radius, slo_img, relezimap, scan_size,
             # mask where ez and elm map not zero
             not_zeror = np.logical_and(relezimap._ezi_map != 0, relezimap._elmi_map != 0)
 
-            for idx in range(33):      
-                stimuli_pos_mask = ((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2) <= radius ** 2      
-                mask_iamd[stimuli_pos_mask] = idx + 1
-                stimuli_map[stimuli_pos_mask] = stimuli[idx]
+            for idx in range(33):
+                dist_map =  ((yy - y_new[idx]) ** 2) + ((xx - x_new[idx])**2)     
+                stimuli_pos_mask = dist_map <= radius ** 2     
+                
+                mask_iamd_maps[idx, stimuli_pos_mask] = idx + 1
+                stimuli_maps[idx, stimuli_pos_mask] = stimuli[idx]
+                dist_maps[idx,stimuli_pos_mask] = dist_map[stimuli_pos_mask]
 
-                not_zero_and_stimuli_pos_mask = np.logical_and(not_zeror, stimuli_pos_mask)
-                mean_rezi_maps[idx,stimuli_pos_mask] = np.nanmean(relezimap._ezi_map[not_zero_and_stimuli_pos_mask] / relezimap._elmi_map[not_zero_and_stimuli_pos_mask])
-
-
-            return mask_iamd, stimuli_map, mean_rezi_maps
+            return mask_iamd_maps, stimuli_maps, dist_maps
 
 def sample_circle(x,y, radius, field, no_dc_ratio):
     yy,xx = np.mgrid[:field.shape[0], :field.shape[1]]
